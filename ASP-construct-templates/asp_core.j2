@@ -1,4 +1,4 @@
-{# asp_core.j2 — Core ASP building blocks: term, atom, literal #}
+{# ========= asp_core.j2 — Core ASP building blocks ========= #}
 
 {%- macro render_term(term) -%}
 {{ term }}
@@ -16,4 +16,22 @@
 {%- if classical %} {% endif -%}
 {%- if naf %}not {% endif -%}
 {{ render_atom(predicate, terms) }}
+{%- endmacro %}
+
+{# ========= High-level ASP constructs like facts, rules, etc. ========= #}
+
+{% macro render_fact(predicate, terms) -%}
+{{ render_atom(predicate, terms) }}.
+{%- endmacro %}
+
+{%- macro render_rule(head_predicate, head_terms, body_literals) -%}
+{{ render_atom(head_predicate, head_terms) }} :- {{ body_literals | join(', ') }}.
+{%- endmacro %}
+
+{% macro render_cardinality_constraint(lower, upper, head_predicate, head_terms, condition_predicate, condition_terms, apply_if_predicate, apply_if_terms) -%}
+{{ lower }} <= { {{ render_atom(head_predicate, head_terms) }}:{{ render_atom(condition_predicate, condition_terms) }} } <= {{ upper }} :- {{ render_atom(apply_if_predicate, apply_if_terms) }}.
+{%- endmacro %}
+
+{% macro render_integrity_constraint(body_literals) -%}
+:- {{ body_literals | join(', ') }}.
 {%- endmacro %}
