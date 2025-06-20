@@ -58,15 +58,16 @@ class CardinalityConstraint:
         self.apply_if_predicate = ensure_list(apply_if_predicate)
         self.apply_if_terms = [ensure_list(t) for t in apply_if_terms]
 
-# === ASP_Program Class ===
+# === ASPProgram Class ===
 
-class ASP_Program:
+class ASPProgram:
     def __init__(self, template_dir='./ASP-construct-templates'):
         self.facts = []
         self.rules = []
         self.constraints = []
         self.card_constraints = []
         self.template_dir = template_dir
+        self.variations = {}
         self.env = Environment(loader=FileSystemLoader(template_dir))
         self.template = self.env.get_template('asp_core.j2')
 
@@ -82,6 +83,12 @@ class ASP_Program:
         result.template = result.env.get_template('asp_core.j2')
         return result
 
+    def add_variations(self, variations):
+        self.variations = variations
+
+    def get_variations(self):
+        return self.variations
+
     def add_fact(self, predicate, terms):
         self.facts.append(Fact(predicate, terms))
 
@@ -94,33 +101,46 @@ class ASP_Program:
     def add_cardinality_constraint(self, *args):
         self.card_constraints.append(CardinalityConstraint(*args))
 
-    def generate_variations(self, variations):
+# === Data_Generator Class ===
+
+class DataGenerator:
+
+    def __init__(self, program=None):
+        self.programs = []
+        self.data_items = []
+        if program is not None:
+            self.add_program(program)
+
+    def add_program(self, program):
+        self.programs.append(program)
+
+    def generate_variations(self, program, variations):
         keys = list(variations.keys())
         for values in itertools.product(*[variations[k] for k in keys]):
             mapping = dict(zip(keys, values))
-            new_prog = copy.deepcopy(self)
-            new_prog.facts = [substitute_placeholders(f, mapping) for f in self.facts]
-            new_prog.rules = [substitute_placeholders(r, mapping) for r in self.rules]
-            new_prog.constraints = [substitute_placeholders(c, mapping) for c in self.constraints]
-            new_prog.card_constraints = [substitute_placeholders(cc, mapping) for cc in self.card_constraints]
+            new_prog = copy.deepcopy(program)
+            new_prog.facts = [substitute_placeholders(f, mapping) for f in program.facts]
+            new_prog.rules = [substitute_placeholders(r, mapping) for r in program.rules]
+            new_prog.constraints = [substitute_placeholders(c, mapping) for c in program.constraints]
+            new_prog.card_constraints = [substitute_placeholders(cc, mapping) for cc in program.card_constraints]
             yield new_prog
 
-    def render(self):
-        t = self.template.module
+    def render(self, program):
+        t = program.template.module
         parts = []
-        for f in self.facts:
+        for f in program.facts:
             predicate = f.predicate[0]
             terms = [term[0] for term in f.terms]
             parts.append(t.render_fact(predicate, terms))
-        for r in self.rules:
+        for r in program.rules:
             head_predicate = r.head_predicate[0]
             head_terms = [term[0] for term in r.head_terms]
             body_literals = [lit[0] for lit in r.body_literals]
             parts.append(t.render_rule(head_predicate, head_terms, body_literals))
-        for c in self.constraints:
+        for c in program.constraints:
             body_literals = [lit[0] for lit in c.body_literals]
             parts.append(t.render_integrity_constraint(body_literals))
-        for cc in self.card_constraints:
+        for cc in program.card_constraints:
             lower = cc.lower[0]
             upper = cc.upper[0]
             head_predicate = cc.head_predicate[0]
@@ -136,4 +156,13 @@ class ASP_Program:
                 apply_if_predicate, apply_if_terms
             ))
         return '\n'.join(parts)
+    
+    def generate_data(self):
+        # For each program added
+        for p in self.programs:
+            # For each variant for each program
+            for variant in self.generate_variations(p, p.get_variations()):
+                self.data_items.append(self.render(variant))
+                print(self.render(variant))
+
 
