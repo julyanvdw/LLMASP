@@ -1,0 +1,19 @@
+{# asp_constructs.j2 — High-level ASP constructs like facts, rules, etc. #}
+
+{% import 'asp_core.j2' as core %}
+
+{% macro render_fact(predicate, terms) -%}
+{{ core.render_atom(predicate, terms) }}.
+{%- endmacro %}
+
+{%- macro render_rule(head_predicate, head_terms, body_literals) -%}
+{{ core.render_atom(head_predicate, head_terms) }} :- {{ body_literals | join(', ') }}.
+{%- endmacro %}
+
+{% macro render_cardinality_constraint(lower, upper, head_predicate, head_terms, condition_predicate, condition_terms, apply_if_predicate, apply_if_terms) -%}
+{{ lower }} <= { {{ core.render_atom(head_predicate, head_terms) }}:{{ core.render_atom(condition_predicate, condition_terms) }} } <= {{ upper }} :- {{ core.render_atom(apply_if_predicate, apply_if_terms) }}.
+{%- endmacro %}
+
+{% macro render_integrity_constraint(body_literals) -%}
+:- {{ body_literals | join(', ') }}.
+{%- endmacro %}
