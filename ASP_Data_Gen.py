@@ -2,36 +2,60 @@
 #Allows a user to model ASP programs as templates which van be varied
 
 from jinja2 import Environment, FileSystemLoader
+import itertools
+import copy
 
 # === ASP Construct Classes ===
 
+def ensure_list(val):
+    if isinstance(val, list):
+        return val
+    return [val]
+
+def substitute_placeholders(obj, mapping):
+    # Recursively substitute placeholders in predicates and terms
+    if isinstance(obj, str):
+        for k, v in mapping.items():
+            obj = obj.replace('{' + k + '}', v)
+        return obj
+    elif isinstance(obj, list):
+        return [substitute_placeholders(x, mapping) for x in obj]
+    elif hasattr(obj, '__dict__'):
+        new_obj = copy.deepcopy(obj)
+        for attr, value in new_obj.__dict__.items():
+            setattr(new_obj, attr, substitute_placeholders(value, mapping))
+        return new_obj
+    else:
+        return obj
+
 class Fact:
     def __init__(self, predicate, terms):
-        self.predicate = predicate
-        self.terms = terms
+        self.predicate = ensure_list(predicate)
+        # terms is a list of terms, but each term could be a list of options
+        self.terms = [ensure_list(t) for t in terms]
 
 class Rule:
     def __init__(self, head_predicate, head_terms, body_literals):
-        self.head_predicate = head_predicate
-        self.head_terms = head_terms
-        self.body_literals = body_literals
+        self.head_predicate = ensure_list(head_predicate)
+        self.head_terms = [ensure_list(t) for t in head_terms]
+        self.body_literals = [ensure_list(lit) for lit in body_literals]
 
 class Constraint:
     def __init__(self, body_literals):
-        self.body_literals = body_literals
+        self.body_literals = [ensure_list(lit) for lit in body_literals]
 
 class CardinalityConstraint:
     def __init__(self, lower, upper, head_predicate, head_terms,
                  condition_predicate, condition_terms,
                  apply_if_predicate, apply_if_terms):
-        self.lower = lower
-        self.upper = upper
-        self.head_predicate = head_predicate
-        self.head_terms = head_terms
-        self.condition_predicate = condition_predicate
-        self.condition_terms = condition_terms
-        self.apply_if_predicate = apply_if_predicate
-        self.apply_if_terms = apply_if_terms
+        self.lower = ensure_list(lower)
+        self.upper = ensure_list(upper)
+        self.head_predicate = ensure_list(head_predicate)
+        self.head_terms = [ensure_list(t) for t in head_terms]
+        self.condition_predicate = ensure_list(condition_predicate)
+        self.condition_terms = [ensure_list(t) for t in condition_terms]
+        self.apply_if_predicate = ensure_list(apply_if_predicate)
+        self.apply_if_terms = [ensure_list(t) for t in apply_if_terms]
 
 # === Program Builder ===
 
@@ -41,8 +65,23 @@ class ASP_Program:
         self.rules = []
         self.constraints = []
         self.card_constraints = []
+        self.template_dir = template_dir
         self.env = Environment(loader=FileSystemLoader(template_dir))
         self.template = self.env.get_template('asp_core.j2')
+
+    def __deepcopy__(self, memo):
+        # Create a new instance without copying env/template
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        # Copy all attributes except env and template
+        for k, v in self.__dict__.items():
+            if k not in ('env', 'template'):
+                setattr(result, k, copy.deepcopy(v, memo))
+        # Re-initialize env and template
+        result.env = Environment(loader=FileSystemLoader(self.template_dir))
+        result.template = result.env.get_template('asp_core.j2')
+        return result
 
     def add_fact(self, predicate, terms):
         self.facts.append(Fact(predicate, terms))
@@ -56,24 +95,50 @@ class ASP_Program:
     def add_cardinality_constraint(self, *args):
         self.card_constraints.append(CardinalityConstraint(*args))
 
+    def generate_variations(self, variations):
+        keys = list(variations.keys())
+        for values in itertools.product(*[variations[k] for k in keys]):
+            mapping = dict(zip(keys, values))
+            new_prog = copy.deepcopy(self)
+            # Substitute placeholders in all constructs
+            new_prog.facts = [substitute_placeholders(f, mapping) for f in self.facts]
+            new_prog.rules = [substitute_placeholders(r, mapping) for r in self.rules]
+            new_prog.constraints = [substitute_placeholders(c, mapping) for c in self.constraints]
+            new_prog.card_constraints = [substitute_placeholders(cc, mapping) for cc in self.card_constraints]
+            yield new_prog
+
+
     def render(self):
         t = self.template.module
         parts = []
 
         for f in self.facts:
-            parts.append(t.render_fact(f.predicate, f.terms))
+            # Use only the first entry for each list
+            predicate = f.predicate[0]
+            terms = [t[0] for t in f.terms]
+            parts.append(t.render_fact(predicate, terms))
         for r in self.rules:
-            parts.append(t.render_rule(r.head_predicate, r.head_terms, r.body_literals))
+            head_predicate = r.head_predicate[0]
+            head_terms = [t[0] for t in r.head_terms]
+            body_literals = [lit[0] for lit in r.body_literals]
+            parts.append(t.render_rule(head_predicate, head_terms, body_literals))
         for c in self.constraints:
-            parts.append(t.render_integrity_constraint(c.body_literals))
+            body_literals = [lit[0] for lit in c.body_literals]
+            parts.append(t.render_integrity_constraint(body_literals))
         for cc in self.card_constraints:
+            lower = cc.lower[0]
+            upper = cc.upper[0]
+            head_predicate = cc.head_predicate[0]
+            head_terms = [t[0] for t in cc.head_terms]
+            condition_predicate = cc.condition_predicate[0]
+            condition_terms = [t[0] for t in cc.condition_terms]
+            apply_if_predicate = cc.apply_if_predicate[0]
+            apply_if_terms = [t[0] for t in cc.apply_if_terms]
             parts.append(t.render_cardinality_constraint(
-                cc.lower, cc.upper,
-                cc.head_predicate, cc.head_terms,
-                cc.condition_predicate, cc.condition_terms,
-                cc.apply_if_predicate, cc.apply_if_terms
+                lower, upper,
+                head_predicate, head_terms,
+                condition_predicate, condition_terms,
+                apply_if_predicate, apply_if_terms
             ))
 
         return '\n'.join(parts)
-    
-    # === Data Generator ===
