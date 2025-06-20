@@ -17,7 +17,7 @@ p.add_fact('{name}', ['{ranges}'])
 p2 = ASPProgram()
 
 variations = {
-    'name': ['Alice', 'Bob', 'John']
+    'name': ['Alice', 'Bob', 'Mike']
 }
 
 p2.add_fact('person', ['{name}'])
@@ -31,4 +31,6 @@ dataGen.add_program(p)
 dataGen.add_program(p2)
 
 dataGen.generate_data()
+dataGen.test_print()
+
 

@@ -2,6 +2,7 @@
 # Imports and helper functions for ASP program generation
 
 #todo - could add some sort of syntatic type hint to make the modeling usage easier for someone programming
+#todo - maybe integrate clingo just to check the syntactic correctness of the generated ASP programs
 
 from jinja2 import Environment, FileSystemLoader
 import itertools
@@ -11,22 +12,6 @@ def ensure_list(val):
     if isinstance(val, list):
         return val
     return [val]
-
-def substitute_placeholders(obj, mapping):
-    """Recursively substitute placeholders in strings, lists, and objects."""
-    if isinstance(obj, str):
-        for k, v in mapping.items():
-            obj = obj.replace('{' + k + '}', v)
-        return obj
-    elif isinstance(obj, list):
-        return [substitute_placeholders(x, mapping) for x in obj]
-    elif hasattr(obj, '__dict__'):
-        new_obj = copy.deepcopy(obj)
-        for attr, value in new_obj.__dict__.items():
-            setattr(new_obj, attr, substitute_placeholders(value, mapping))
-        return new_obj
-    else:
-        return obj
 
 # === ASP Construct Classes ===
 
@@ -40,7 +25,7 @@ class Rule:
         self.head_predicate = ensure_list(head_predicate)
         self.head_terms = [ensure_list(t) for t in head_terms]
         self.body_literals = [ensure_list(lit) for lit in body_literals]
-
+        
 class Constraint:
     def __init__(self, body_literals):
         self.body_literals = [ensure_list(lit) for lit in body_literals]
@@ -59,6 +44,7 @@ class CardinalityConstraint:
         self.apply_if_terms = [ensure_list(t) for t in apply_if_terms]
 
 # === ASPProgram Class ===
+
 
 class ASPProgram:
     def __init__(self, template_dir='./ASP-construct-templates'):
@@ -101,31 +87,49 @@ class ASPProgram:
     def add_cardinality_constraint(self, *args):
         self.card_constraints.append(CardinalityConstraint(*args))
 
-# === Data_Generator Class ===
-
+# === DataGenerator Class ===
+ 
 class DataGenerator:
 
     def __init__(self, program=None):
-        self.programs = []
+        self.modeled_programs = []
         self.data_items = []
+
+
         if program is not None:
             self.add_program(program)
 
     def add_program(self, program):
-        self.programs.append(program)
+        self.modeled_programs.append(program)
 
-    def generate_variations(self, program, variations):
+    def _substitute_placeholders(self, obj, mapping):
+        """Recursively substitute placeholders in strings, lists, and objects."""
+        if isinstance(obj, str):
+            for k, v in mapping.items():
+                obj = obj.replace('{' + k + '}', v)
+            return obj
+        elif isinstance(obj, list):
+            return [self._substitute_placeholders(x, mapping) for x in obj]
+        elif hasattr(obj, '__dict__'):
+            new_obj = copy.deepcopy(obj)
+            for attr, value in new_obj.__dict__.items():
+                setattr(new_obj, attr, self._substitute_placeholders(value, mapping))
+            return new_obj
+        else:
+            return obj
+
+    def _generate_variations(self, program, variations):
         keys = list(variations.keys())
         for values in itertools.product(*[variations[k] for k in keys]):
             mapping = dict(zip(keys, values))
             new_prog = copy.deepcopy(program)
-            new_prog.facts = [substitute_placeholders(f, mapping) for f in program.facts]
-            new_prog.rules = [substitute_placeholders(r, mapping) for r in program.rules]
-            new_prog.constraints = [substitute_placeholders(c, mapping) for c in program.constraints]
-            new_prog.card_constraints = [substitute_placeholders(cc, mapping) for cc in program.card_constraints]
+            new_prog.facts = [self._substitute_placeholders(f, mapping) for f in program.facts]
+            new_prog.rules = [self._substitute_placeholders(r, mapping) for r in program.rules]
+            new_prog.constraints = [self._substitute_placeholders(c, mapping) for c in program.constraints]
+            new_prog.card_constraints = [self._substitute_placeholders(cc, mapping) for cc in program.card_constraints]
             yield new_prog
 
-    def render(self, program):
+    def _render_ASP_component(self, program):
         t = program.template.module
         parts = []
         for f in program.facts:
@@ -158,11 +162,39 @@ class DataGenerator:
         return '\n'.join(parts)
     
     def generate_data(self):
-        # For each program added
-        for p in self.programs:
-            # For each variant for each program
-            for variant in self.generate_variations(p, p.get_variations()):
-                self.data_items.append(self.render(variant))
-                print(self.render(variant))
+
+        for p in self.modeled_programs:
+            for variation in self._generate_variations(p, p.get_variations()):
+                
+                #for splice in self._generate_splices(variation):
+
+
+                # todo - these must be indented when we have the splice thing sorted out
+                data_item = {
+                    'ASP': None,
+                    'CNL': None,
+                    'NL': None
+                }
+
+                # Render the ASP component for this specific splice
+                data_item['ASP'] = self._render_ASP_component(variation)
+
+                # Render the CNL component for this specific splice
+
+                # Render the NL component for this specific splice
+
+                # APPEND TO DATAITEMS
+                self.data_items.append(data_item)
+                
+    def test_print(self):
+        for item in self.data_items:
+            print(item['ASP'])
+
+
+            
+
+
+
+
 
 
