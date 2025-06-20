@@ -1,0 +1,19 @@
+{# asp_core.j2 — Core ASP building blocks: term, atom, literal #}
+
+{%- macro render_term(term) -%}
+{{ term }}
+{%- endmacro %}
+
+{%- macro render_predicate(name) -%}
+{{ name }}
+{%- endmacro %}
+
+{%- macro render_atom(predicate, terms) -%}
+{{ render_predicate(predicate) }}({{ terms | join(', ') }})
+{%- endmacro %}
+
+{%- macro render_literal(predicate, terms, naf=False, classical=False) -%}
+{%- if classical %} {% endif -%}
+{%- if naf %}not {% endif -%}
+{{ render_atom(predicate, terms) }}
+{%- endmacro %}
