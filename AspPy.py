@@ -1,11 +1,11 @@
-#An API to model and generate ASP programs using python
-#Allows a user to model ASP programs as templates which van be varied
+# AspPy is an API for modeling ASP rules with python in a parametrized way
+# Imports and helper functions for ASP program generation
+
+#todo - could add some sort of syntatic type hint to make the modeling usage easier for someone programming
 
 from jinja2 import Environment, FileSystemLoader
 import itertools
 import copy
-
-# === ASP Construct Classes ===
 
 def ensure_list(val):
     if isinstance(val, list):
@@ -13,7 +13,7 @@ def ensure_list(val):
     return [val]
 
 def substitute_placeholders(obj, mapping):
-    # Recursively substitute placeholders in predicates and terms
+    """Recursively substitute placeholders in strings, lists, and objects."""
     if isinstance(obj, str):
         for k, v in mapping.items():
             obj = obj.replace('{' + k + '}', v)
@@ -28,10 +28,11 @@ def substitute_placeholders(obj, mapping):
     else:
         return obj
 
+# === ASP Construct Classes ===
+
 class Fact:
     def __init__(self, predicate, terms):
         self.predicate = ensure_list(predicate)
-        # terms is a list of terms, but each term could be a list of options
         self.terms = [ensure_list(t) for t in terms]
 
 class Rule:
@@ -57,7 +58,7 @@ class CardinalityConstraint:
         self.apply_if_predicate = ensure_list(apply_if_predicate)
         self.apply_if_terms = [ensure_list(t) for t in apply_if_terms]
 
-# === Program Builder ===
+# === ASP_Program Class ===
 
 class ASP_Program:
     def __init__(self, template_dir='./ASP-construct-templates'):
@@ -70,15 +71,13 @@ class ASP_Program:
         self.template = self.env.get_template('asp_core.j2')
 
     def __deepcopy__(self, memo):
-        # Create a new instance without copying env/template
+        # Avoid copying env/template (not deepcopy-able)
         cls = self.__class__
         result = cls.__new__(cls)
         memo[id(self)] = result
-        # Copy all attributes except env and template
         for k, v in self.__dict__.items():
             if k not in ('env', 'template'):
                 setattr(result, k, copy.deepcopy(v, memo))
-        # Re-initialize env and template
         result.env = Environment(loader=FileSystemLoader(self.template_dir))
         result.template = result.env.get_template('asp_core.j2')
         return result
@@ -100,26 +99,22 @@ class ASP_Program:
         for values in itertools.product(*[variations[k] for k in keys]):
             mapping = dict(zip(keys, values))
             new_prog = copy.deepcopy(self)
-            # Substitute placeholders in all constructs
             new_prog.facts = [substitute_placeholders(f, mapping) for f in self.facts]
             new_prog.rules = [substitute_placeholders(r, mapping) for r in self.rules]
             new_prog.constraints = [substitute_placeholders(c, mapping) for c in self.constraints]
             new_prog.card_constraints = [substitute_placeholders(cc, mapping) for cc in self.card_constraints]
             yield new_prog
 
-
     def render(self):
         t = self.template.module
         parts = []
-
         for f in self.facts:
-            # Use only the first entry for each list
             predicate = f.predicate[0]
-            terms = [t[0] for t in f.terms]
+            terms = [term[0] for term in f.terms]
             parts.append(t.render_fact(predicate, terms))
         for r in self.rules:
             head_predicate = r.head_predicate[0]
-            head_terms = [t[0] for t in r.head_terms]
+            head_terms = [term[0] for term in r.head_terms]
             body_literals = [lit[0] for lit in r.body_literals]
             parts.append(t.render_rule(head_predicate, head_terms, body_literals))
         for c in self.constraints:
@@ -129,16 +124,16 @@ class ASP_Program:
             lower = cc.lower[0]
             upper = cc.upper[0]
             head_predicate = cc.head_predicate[0]
-            head_terms = [t[0] for t in cc.head_terms]
+            head_terms = [term[0] for term in cc.head_terms]
             condition_predicate = cc.condition_predicate[0]
-            condition_terms = [t[0] for t in cc.condition_terms]
+            condition_terms = [term[0] for term in cc.condition_terms]
             apply_if_predicate = cc.apply_if_predicate[0]
-            apply_if_terms = [t[0] for t in cc.apply_if_terms]
+            apply_if_terms = [term[0] for term in cc.apply_if_terms]
             parts.append(t.render_cardinality_constraint(
                 lower, upper,
                 head_predicate, head_terms,
                 condition_predicate, condition_terms,
                 apply_if_predicate, apply_if_terms
             ))
-
         return '\n'.join(parts)
+
