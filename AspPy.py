@@ -91,16 +91,23 @@ class ASPProgram:
  
 class DataGenerator:
 
-    def __init__(self, program=None):
+    def __init__(self, program=None, splice_params=None):
         self.modeled_programs = []
         self.data_items = []
-
+        self.splice_params = ''
 
         if program is not None:
             self.add_program(program)
 
+        if splice_params is not None:
+            self.add_splice_params(splice_params)
+
+
     def add_program(self, program):
         self.modeled_programs.append(program)
+
+    def add_splice_params(self,splice_params):
+        self.splice_params = splice_params
 
     def _substitute_placeholders(self, obj, mapping):
         """Recursively substitute placeholders in strings, lists, and objects."""
@@ -161,37 +168,137 @@ class DataGenerator:
             ))
         return '\n'.join(parts)
     
+    def _generate_splices(self, variation, splice_param):
+        """
+        Generate splices as ASPProgram objects, and if randomised_order is True,
+        shuffle the order of lines within each splice before yielding.
+        """
+        import random
+
+        # Parse params
+        if isinstance(splice_param, str):
+            strategy = splice_param
+            min_size = 1
+            max_size = len(variation.facts) + len(variation.rules) + len(variation.constraints) + len(variation.card_constraints)
+            window_type = 'sliding'
+            random_samples = 3
+            random_repeat_cutoff = 1
+            randomised_order = False
+        else:
+            strategy = splice_param.get('strategy', 'multi_granularity')
+            min_size = splice_param.get('min_size', 1)
+            max_size = splice_param.get('max_size', None)
+            if max_size is None:
+                max_size = len(variation.facts) + len(variation.rules) + len(variation.constraints) + len(variation.card_constraints)
+            window_type = splice_param.get('window_type', 'sliding')
+            random_samples = splice_param.get('random_samples', 3)
+            random_repeat_cutoff = splice_param.get('random_repeat_cutoff', 1)
+            randomised_order = splice_param.get('randomised_order', False)
+
+        # Convert all ASP components to a flat list of (type, obj)
+        lines = []
+        for f in variation.facts:
+            lines.append(('fact', f))
+        for r in variation.rules:
+            lines.append(('rule', r))
+        for c in variation.constraints:
+            lines.append(('constraint', c))
+        for cc in variation.card_constraints:
+            lines.append(('card_constraint', cc))
+        n = len(lines)
+        if n == 0:
+            return
+
+        def make_program_from_lines(lines_subset):
+            # Shuffle the lines within the splice if requested
+            if randomised_order:
+                lines_shuffled = lines_subset[:]
+                random.shuffle(lines_shuffled)
+            else:
+                lines_shuffled = lines_subset
+            prog = copy.deepcopy(variation)
+            prog.facts = []
+            prog.rules = []
+            prog.constraints = []
+            prog.card_constraints = []
+            for typ, obj in lines_shuffled:
+                if typ == 'fact':
+                    prog.facts.append(obj)
+                elif typ == 'rule':
+                    prog.rules.append(obj)
+                elif typ == 'constraint':
+                    prog.constraints.append(obj)
+                elif typ == 'card_constraint':
+                    prog.card_constraints.append(obj)
+            return prog
+
+        # --- Generate and yield splices ---
+        if strategy == 'multi_granularity':
+            for k in range(max_size, min_size - 1, -1):
+                if k > n:
+                    continue
+                if window_type == 'sliding':
+                    for i in range(n - k + 1):
+                        yield make_program_from_lines(lines[i:i+k])
+                elif window_type == 'nonoverlap':
+                    for i in range(0, n, k):
+                        if i + k <= n:
+                            yield make_program_from_lines(lines[i:i+k])
+                elif window_type == 'random':
+                    repeat = random_samples if k < random_repeat_cutoff else 1
+                    for _ in range(repeat):
+                        indices = sorted(random.sample(range(n), k))
+                        yield make_program_from_lines([lines[idx] for idx in indices])
+        elif strategy == 'single':
+            for line in lines:
+                yield make_program_from_lines([line])
+        elif strategy == 'chunk':
+            chunk_size = splice_param.get('chunk_size', 2)
+            for i in range(0, n, chunk_size):
+                yield make_program_from_lines(lines[i:i+chunk_size])
+        elif strategy == 'random':
+            k = splice_param.get('random_k', 2)
+            random_samples = splice_param.get('random_samples', 3)
+            randomised_order = splice_param.get('randomised_order', False)
+            if k > n:
+                return
+            for _ in range(random_samples):
+                indices = sorted(random.sample(range(n), k))
+                yield make_program_from_lines([lines[idx] for idx in indices])
+        elif strategy == 'whole':
+            yield make_program_from_lines(lines)
+        else:
+            raise ValueError(f"Unknown splicing strategy: {strategy}")
+
     def generate_data(self):
 
         for p in self.modeled_programs:
             for variation in self._generate_variations(p, p.get_variations()):
+                for splice in self._generate_splices(variation, self.splice_params):
                 
-                #for splice in self._generate_splices(variation):
+                    data_item = {
+                        'ASP': None,
+                        'CNL': None,
+                        'NL': None
+                    }
 
+                    # Render the ASP component for this specific splice
+                    data_item['ASP'] = self._render_ASP_component(splice)
 
-                # todo - these must be indented when we have the splice thing sorted out
-                data_item = {
-                    'ASP': None,
-                    'CNL': None,
-                    'NL': None
-                }
+                    # Render the CNL component for this specific splice
 
-                # Render the ASP component for this specific splice
-                data_item['ASP'] = self._render_ASP_component(variation)
+                    # Render the NL component for this specific splice
 
-                # Render the CNL component for this specific splice
+                    # APPEND TO DATAITEMS
+                    self.data_items.append(data_item)
 
-                # Render the NL component for this specific splice
-
-                # APPEND TO DATAITEMS
-                self.data_items.append(data_item)
-                
     def test_print(self):
         for item in self.data_items:
             print(item['ASP'])
+            print()
 
 
-            
+
 
 
 

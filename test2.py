@@ -4,33 +4,67 @@ from AspPy import ASPProgram, DataGenerator
 # first program
 p = ASPProgram()
 
-variations = {
-    'name': ['node', 'vertex'],
-    'ranges': ['1..3', '1..5']
-}
+# variations = {
+#     'name': ['node', 'vertex'],
+#     'ranges': ['1..3', '1..5']
+# }
 
-p.add_variations(variations)
+# p.add_variations(variations)
 
-p.add_fact('{name}', ['{ranges}'])
+p.add_fact('dog', ['Rover'])
+p.add_fact('cat', ['Felix'])
+p.add_fact('person', ['Bob'])
+p.add_fact('person', ['Alice'])
+p.add_fact('person', ['Jane'])
 
-# second program
-p2 = ASPProgram()
+# # 1. Multi-granularity (default: sliding window)
+# splice_params = {
+#     'strategy': 'multi_granularity',
+#     'min_size': 1,
+#     'max_size': None,
+#     'window_type': 'sliding',
+#     'random_samples': 5,
+#     'random_repeat_cutoff': 4,
+#     'randomised_order': True  # <-- randomise the order of program lines before splicing
+# }
+# dg = DataGenerator(p, splice_params=splice_params)
+# dg.generate_data()
+# dg.test_print()
 
-variations = {
-    'name': ['Alice', 'Bob', 'Mike']
-}
+# 2. Single line splices
+# splice_params = 'single'
+# dg = DataGenerator(p, splice_params=splice_params)
+# dg.generate_data()
+# dg.test_print()
 
-p2.add_fact('person', ['{name}'])
-p2.add_variations(variations)
+# 3. Fixed-size chunking (e.g., chunks of 2 lines)
+# splice_params = {
+#     'strategy': 'chunk',
+#     'chunk_size': 2,
+#     'randomised_order': True
+# }
+# dg = DataGenerator(p, splice_params=splice_params)
+# dg.generate_data()
+# dg.test_print()
 
+# 4. Random sampling (e.g., 3 lines per splice, 4 samples)
+# splice_params = {
+#     'strategy': 'random',
+#     'random_k': 3,
+#     'random_samples': 4
+# }
+# dg = DataGenerator(p, splice_params=splice_params)
+# dg.generate_data()
+# dg.test_print()
 
-# Set up the generator
+# 5. Whole program as a single splice
+# splice_params = {
+#     'strategy': 'whole',
+#     'randomised_order': True
+# }
+# dg = DataGenerator(p, splice_params=splice_params)
+# dg.generate_data()
+# dg.test_print()
 
-dataGen = DataGenerator()
-dataGen.add_program(p)
-dataGen.add_program(p2)
-
-dataGen.generate_data()
-dataGen.test_print()
 
 
