@@ -17,19 +17,20 @@ p.add_fact('person', ['Bob'])
 p.add_fact('person', ['Alice'])
 p.add_fact('person', ['Jane'])
 
-# # 1. Multi-granularity (default: sliding window)
-# splice_params = {
-#     'strategy': 'multi_granularity',
-#     'min_size': 1,
-#     'max_size': None,
-#     'window_type': 'sliding',
-#     'random_samples': 5,
-#     'random_repeat_cutoff': 4,
-#     'randomised_order': True  # <-- randomise the order of program lines before splicing
-# }
-# dg = DataGenerator(p, splice_params=splice_params)
-# dg.generate_data()
-# dg.test_print()
+# 1. Multi-granularity (default: sliding window)
+splice_params = {
+    'strategy': 'multi_granularity',
+    'min_size': 1,
+    'max_size': None,
+    'window_type': 'random',
+    'random_samples': 5,
+    'random_repeat_min': 2,      # Only repeat if k >= 2
+    'random_repeat_cutoff': 6,   # Only repeat if k < 6
+    'randomised_order': True  # <-- randomise the order of program lines before splicing
+}
+dg = DataGenerator(p, splice_params=splice_params)
+dg.generate_data()
+dg.test_print()
 
 # 2. Single line splices
 # splice_params = 'single'

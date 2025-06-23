@@ -296,6 +296,7 @@ class DataGenerator:
 
         # --- Generate and yield splices ---
         if strategy == 'multi_granularity':
+            random_repeat_min = splice_param.get('random_repeat_min', 1)
             for k in range(max_size, min_size - 1, -1):
                 if k > n:
                     continue
@@ -307,7 +308,11 @@ class DataGenerator:
                         if i + k <= n:
                             yield make_program_from_lines(lines[i:i+k])
                 elif window_type == 'random':
-                    repeat = random_samples if k < random_repeat_cutoff else 1
+                    # Only repeat if random_repeat_min <= k < random_repeat_cutoff
+                    if random_repeat_min <= k < random_repeat_cutoff:
+                        repeat = random_samples
+                    else:
+                        repeat = 1
                     for _ in range(repeat):
                         indices = sorted(random.sample(range(n), k))
                         yield make_program_from_lines([lines[idx] for idx in indices])
