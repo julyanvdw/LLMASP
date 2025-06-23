@@ -170,8 +170,70 @@ class DataGenerator:
     
     def _generate_splices(self, variation, splice_param):
         """
-        Generate splices as ASPProgram objects, and if randomised_order is True,
-        shuffle the order of lines within each splice before yielding.
+        Splicing Strategies for DataGenerator
+
+        You can control how ASP program variations are split into "splices" (sub-programs) using the `splice_params` argument.
+        This enables you to generate more data from each variation at different granularities.
+
+        splice_params can be a string (strategy name) or a dict with more options.
+
+        Supported strategies and parameters:
+
+        1. 'multi_granularity'
+            - For a program of n lines, generates splices for every chunk size from max_size down to min_size.
+            - For each chunk size k, you can choose how to select the chunks:
+                - window_type = 'sliding': All consecutive k-line windows (default).
+                - window_type = 'nonoverlap': Non-overlapping k-line chunks.
+                - window_type = 'random': Randomly sample k lines (random_samples times).
+            - Example:
+                splice_params = {
+                    'strategy': 'multi_granularity',
+                    'min_size': 1,
+                    'max_size': None,  # None means use program size
+                    'window_type': 'sliding',  # or 'random', 'nonoverlap'
+                    'random_samples': 5        # Only used if window_type is 'random'
+                }
+
+        2. 'single'
+            - Each line (fact, rule, constraint, etc.) is its own splice.
+            - Example: splice_params = 'single'
+
+        3. 'chunk'
+            - Program is split into consecutive chunks of a fixed size.
+            - Parameters:
+                - chunk_size: number of lines per chunk (default 2)
+            - Example:
+                splice_params = {
+                    'strategy': 'chunk',
+                    'chunk_size': 3
+                }
+
+        4. 'random'
+            - Randomly sample k lines per splice, repeated random_samples times.
+            - Parameters:
+                - random_k: number of lines per splice (default 2)
+                - random_samples: number of samples to generate (default 3)
+            - Example:
+                splice_params = {
+                    'strategy': 'random',
+                    'random_k': 3,
+                    'random_samples': 10
+                }
+
+        5. 'whole'
+            - The entire program is a single splice.
+            - Example: splice_params = 'whole'
+
+        Usage:
+            - Pass the desired strategy and parameters to DataGenerator:
+                dg = DataGenerator(program, splice_params=splice_params)
+            - For multi_granularity, you get the most data diversity.
+
+        Notes:
+            - If you pass a string (e.g., 'single'), defaults are used for other parameters.
+            - For 'multi_granularity', max_size defaults to program size, min_size to 1.
+            - For 'random' and 'multi_granularity' with window_type='random', results are non-deterministic unless you set a random seed.
+
         """
         import random
 
