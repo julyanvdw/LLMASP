@@ -112,10 +112,21 @@ class DataGenerator:
     def add_cnl_templates(self, templates):
         self.cnl_templates = templates
 
-    def get_cnl_template(self, predicate, arity, construct_type):
+    def get_cnl_template(self, predicate, arity, construct_type, mapping=None):
+    # Try concrete key first
         key = f"{predicate}/{arity}:{construct_type}"
         if hasattr(self, 'cnl_templates') and key in self.cnl_templates:
             return self.cnl_templates[key]
+        # Try placeholder key if mapping is provided
+        if mapping:
+            for template_key in getattr(self, 'cnl_templates', {}):
+                if template_key.endswith(f"/{arity}:{construct_type}"):
+                    # Substitute mapping into template_key and compare
+                    test_key = template_key
+                    for k, v in mapping.items():
+                        test_key = test_key.replace(f"{{{k}}}", v)
+                    if test_key == key:
+                        return self.cnl_templates[template_key]
         return None
 
     def _substitute_placeholders(self, obj, mapping):
@@ -188,12 +199,12 @@ class DataGenerator:
             predicate = f.predicate[0]
             terms = [term[0] for term in f.terms]
             arity = len(terms)
-            custom_template = self.get_cnl_template(predicate, arity, "fact")
+            custom_template = self.get_cnl_template(predicate, arity, "fact", mapping)
             if custom_template:
                 cnl = custom_template
-                # Substitute {\1}, {\2}, ... with terms
+                # Substitute {1}, {2}, ... with terms (no slashes or backslashes)
                 for i, term in enumerate(terms):
-                    cnl = cnl.replace(f"/{i+1}", str(term))
+                    cnl = cnl.replace(f"{{{i+1}}}", str(term))
                 # Substitute placeholders from mapping (e.g., {entity})
                 if mapping:
                     for k, v in mapping.items():
@@ -213,6 +224,12 @@ class DataGenerator:
                 for i, term in enumerate(head_terms):
                     cnl = cnl.replace(f"{{{i+1}}}", str(term))
                 # Optionally, add body_literals if your template uses them
+                body_literals = [lit[0] for lit in r.body_literals]
+                for i, lit in enumerate(body_literals):
+                    cnl = cnl.replace(f"{{body{i+1}}}", str(lit))
+                if mapping:
+                    for k, v in mapping.items():
+                        cnl = cnl.replace(f"{{{k}}}", v)
                 parts.append(cnl)
             else:
                 body_literals = [lit[0] for lit in r.body_literals]
@@ -220,11 +237,12 @@ class DataGenerator:
 
         # Constraints
         for c in program.constraints:
-            # You can use a generic key like ":constraint" if you want
             custom_template = self.get_cnl_template("", 0, "constraint")
             if custom_template:
-                # You may want to pass body_literals here
                 cnl = custom_template
+                if mapping:
+                    for k, v in mapping.items():
+                        cnl = cnl.replace(f"{{{k}}}", v)
                 parts.append(cnl)
             else:
                 body_literals = [lit[0] for lit in c.body_literals]
@@ -240,6 +258,9 @@ class DataGenerator:
                 cnl = custom_template
                 for i, term in enumerate(head_terms):
                     cnl = cnl.replace(f"{{{i+1}}}", str(term))
+                if mapping:
+                    for k, v in mapping.items():
+                        cnl = cnl.replace(f"{{{k}}}", v)
                 parts.append(cnl)
             else:
                 lower = cc.lower[0]
