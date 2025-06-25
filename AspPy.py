@@ -109,6 +109,15 @@ class DataGenerator:
     def add_splice_params(self,splice_params):
         self.splice_params = splice_params
 
+    def add_cnl_templates(self, templates):
+        self.cnl_templates = templates
+
+    def get_cnl_template(self, predicate, arity, construct_type):
+        key = f"{predicate}/{arity}:{construct_type}"
+        if hasattr(self, 'cnl_templates') and key in self.cnl_templates:
+            return self.cnl_templates[key]
+        return None
+
     def _substitute_placeholders(self, obj, mapping):
         """Recursively substitute placeholders in strings, lists, and objects."""
         if isinstance(obj, str):
@@ -168,6 +177,86 @@ class DataGenerator:
             ))
         return '\n'.join(parts)
     
+    def _render_CNL_component(self, program, difficulty_level, mapping=None):
+        template_dir = program.template_dir if hasattr(program, 'template_dir') else './ASP-construct-templates'
+        env = Environment(loader=FileSystemLoader(template_dir))
+        t = env.get_template('cnl_core.j2')
+        parts = []
+
+        # Facts
+        for f in program.facts:
+            predicate = f.predicate[0]
+            terms = [term[0] for term in f.terms]
+            arity = len(terms)
+            custom_template = self.get_cnl_template(predicate, arity, "fact")
+            if custom_template:
+                cnl = custom_template
+                # Substitute {\1}, {\2}, ... with terms
+                for i, term in enumerate(terms):
+                    cnl = cnl.replace(f"/{i+1}", str(term))
+                # Substitute placeholders from mapping (e.g., {entity})
+                if mapping:
+                    for k, v in mapping.items():
+                        cnl = cnl.replace(f"{{{k}}}", v)
+                parts.append(cnl)
+            else:
+                parts.append(t.module.render_fact(predicate, terms))
+
+        # Rules
+        for r in program.rules:
+            head_predicate = r.head_predicate[0]
+            head_terms = [term[0] for term in r.head_terms]
+            arity = len(head_terms)
+            custom_template = self.get_cnl_template(head_predicate, arity, "rule")
+            if custom_template:
+                cnl = custom_template
+                for i, term in enumerate(head_terms):
+                    cnl = cnl.replace(f"{{{i+1}}}", str(term))
+                # Optionally, add body_literals if your template uses them
+                parts.append(cnl)
+            else:
+                body_literals = [lit[0] for lit in r.body_literals]
+                parts.append(t.module.render_rule(head_predicate, head_terms, body_literals))
+
+        # Constraints
+        for c in program.constraints:
+            # You can use a generic key like ":constraint" if you want
+            custom_template = self.get_cnl_template("", 0, "constraint")
+            if custom_template:
+                # You may want to pass body_literals here
+                cnl = custom_template
+                parts.append(cnl)
+            else:
+                body_literals = [lit[0] for lit in c.body_literals]
+                parts.append(t.module.render_integrity_constraint(body_literals))
+
+        # Cardinality constraints
+        for cc in program.card_constraints:
+            head_predicate = cc.head_predicate[0]
+            head_terms = [term[0] for term in cc.head_terms]
+            arity = len(head_terms)
+            custom_template = self.get_cnl_template(head_predicate, arity, "card")
+            if custom_template:
+                cnl = custom_template
+                for i, term in enumerate(head_terms):
+                    cnl = cnl.replace(f"{{{i+1}}}", str(term))
+                parts.append(cnl)
+            else:
+                lower = cc.lower[0]
+                upper = cc.upper[0]
+                condition_predicate = cc.condition_predicate[0]
+                condition_terms = [term[0] for term in cc.condition_terms]
+                apply_if_predicate = cc.apply_if_predicate[0]
+                apply_if_terms = [term[0] for term in cc.apply_if_terms]
+                parts.append(t.module.render_cardinality_constraint(
+                    lower, upper,
+                    head_predicate, head_terms,
+                    condition_predicate, condition_terms,
+                    apply_if_predicate, apply_if_terms
+                ))
+
+        return '\n'.join(parts)
+
     def _generate_splices(self, variation, splice_param):
         """
         Splicing Strategies for DataGenerator
@@ -339,30 +428,76 @@ class DataGenerator:
 
     def generate_data(self):
 
+        # GENERATE ASP COMPONENTS
+        asp_components = []
+
         for p in self.modeled_programs:
             for variation in self._generate_variations(p, p.get_variations()):
                 for splice in self._generate_splices(variation, self.splice_params):
+                    asp_components.append(splice)
+
+        for item in asp_components:
+            print(self._render_ASP_component(item))
+
+        print("=======")
+
+        # GENERATE CNL AND NL COMPONENTS 
+        difficulty_levels = ['plain']
+
+        for asp_component in asp_components:
+            for difficulty_level in difficulty_levels:
+                #Generate CNL statement
+                cnl_component_rendered_raw = self._render_CNL_component(asp_component, difficulty_level)
+                print(cnl_component_rendered_raw)
                 
-                    data_item = {
-                        'ASP': None,
-                        'CNL': None,
-                        'NL': None
-                    }
 
-                    # Render the ASP component for this specific splice
-                    data_item['ASP'] = self._render_ASP_component(splice)
 
-                    # Render the CNL component for this specific splice
 
-                    # Render the NL component for this specific splice
 
-                    # APPEND TO DATAITEMS
-                    self.data_items.append(data_item)
+        #for difficulty level in difficulty_levels:
 
-    def test_print(self):
-        for item in self.data_items:
-            print(item['ASP'])
-            print()
+        '''
+        for asp_component in asp_components:
+            
+            asp_component is an ASPProgram object
+            asp_components (the array) contains all the splices we generated previously
+
+            now we generate the CNL and NL components 
+            NB: there may be multiple CNL statements joined with the same ASP component (this gives us expansion)
+
+            We can also paraphrase each CNL component multiple times
+
+
+            #CNL component - generate according to specified difficulty levels
+            for difficulty_level in difficulty_levels:
+            
+                #Generate CNL statement
+                cnl_component_rendered_raw = _render_CNL_component(asp_component, difficulty_level)
+
+                #for each difficulty levels, create different paraphrases
+                    for i range (1..how_many_paraphrases):
+
+                        data_item = {
+                            'ASP': None,
+                            'CNL': None,
+                            'NL': None
+                        }
+                        
+                        #Generate paraphrase
+                        cnl_component_rendered = cnl_paraphrase(cnl_component_rendered_raw, some_paraphrase_modifier)
+                        
+                        #Generate NL component
+                        nl_component_rendered = some_function()
+
+                        data_item['ASP'] = _render_ASP_component(asp_component)
+                        data_item['CNL'] = cnl_component_rendered
+                        data_item['NL'] = nl_component_rendered
+
+            '''
+
+
+
+
 
 
 

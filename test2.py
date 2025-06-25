@@ -1,36 +1,83 @@
 from AspPy import ASPProgram, DataGenerator
 
-
-# first program
+# FACTS WITH VARIATIONS AND TEMPLATES
+# Create the project obeject
 p = ASPProgram()
 
-# variations = {
-#     'name': ['node', 'vertex'],
-#     'ranges': ['1..3', '1..5']
-# }
+# Add lines
+p.add_fact('{entity}', ['Alice'])
+p.add_fact('{entity}', ['Bob'])
 
-# p.add_variations(variations)
-
-p.add_fact('dog', ['Rover'])
-p.add_fact('cat', ['Felix'])
-p.add_fact('person', ['Bob'])
-p.add_fact('person', ['Alice'])
-p.add_fact('person', ['Jane'])
-
-# 1. Multi-granularity (default: sliding window)
-splice_params = {
-    'strategy': 'multi_granularity',
-    'min_size': 1,
-    'max_size': None,
-    'window_type': 'random',
-    'random_samples': 5,
-    'random_repeat_min': 2,      # Only repeat if k >= 2
-    'random_repeat_cutoff': 6,   # Only repeat if k < 6
-    'randomised_order': True  # <-- randomise the order of program lines before splicing
+#Add variations
+variations = {
+    'entity': ['person', 'human']
 }
-dg = DataGenerator(p, splice_params=splice_params)
+p.add_variations(variations)
+
+# Create and setup the data generator object
+dg = DataGenerator(p, splice_params='whole')
+
+# Add CNL templates
+templates = {
+    'entity/1:fact': '{/1} is defs a {entity}'
+}
+
+dg.add_cnl_templates(templates)
+
+
+
+
+
+
+
+
+
+
+
+
+
+'''
+TODO
+1. check the template with other constructs
+2. make the templates work with variations
+
+for rules: 
+1. the default template is bad
+
+
+within a template, we might make use of predicates. For example in a rule, we might say if {1} teaches... but 'teaches' 
+is a predicate in and of itself... 
+
+And then for difficulty
+we could extend this by just manually hardcoding different difficulty variations: 
+templates_plain = {}
+templates_negated = {}
+
+pro: super fine-grained control coupled with combinatorial explosive power
+pro: super extensible (can add more difficutlty variations)
+con: a little bit more up-front effort when moedelling the problem
+'''
+
+
+# 5. Whole program as a single splice
+
 dg.generate_data()
-dg.test_print()
+
+
+# # 1. Multi-granularity (default: sliding window)
+# splice_params = {
+#     'strategy': 'multi_granularity',
+#     'min_size': 1,
+#     'max_size': None,
+#     'window_type': 'random',
+#     'random_samples': 5,
+#     'random_repeat_min': 2,      # Only repeat if k >= 2
+#     'random_repeat_cutoff': 10,   # Only repeat if k < 6
+#     'randomised_order': True  # <-- randomise the order of program lines before splicing
+# }
+# dg = DataGenerator(p, splice_params=splice_params)
+# dg.generate_data()
+# dg.test_print()
 
 # 2. Single line splices
 # splice_params = 'single'
