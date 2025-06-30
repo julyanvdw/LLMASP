@@ -359,8 +359,8 @@ class DataGenerator:
                 for splice in self._generate_splices(variation, self.splice_params):
                     print(self._render_ASP_component(splice))
 
-                    for fact in splice.facts:
-                        cnl_easy = fact.cnl_map.get('easy')
+                    for rule in splice.rules:
+                        cnl_easy = rule.cnl_map.get('easy')
                         print(cnl_easy)
 
                     print()

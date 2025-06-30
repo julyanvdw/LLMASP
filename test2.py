@@ -2,30 +2,19 @@ from AspPy import ASPProgram, DataGenerator
 
 p = ASPProgram()
 
-p.add_fact('{entity}', ['Alice'], {
-    'easy': 'Alice is a {entity}'})
-p.add_fact('dog', ['Rover'], {
-    'easy': 'doggy rover'})
+# Add a rule: happy(X) :- person(X), dog(Y).
+p.add_rule('happy', ['{names}'], [['person({names})'], ['dog({dogs})']], {
+    'easy': 'If {names} is a person, and {dogs} is a dog, then {names} is happy'
+})
 
 v = {
-    'entity': ['person', 'human']
+    'names' : ['Alice', 'Bob'], 
+    'dogs' : ['Rover', 'Pluto'], 
 }
 p.add_variations(v)
 
-
-
-dg = DataGenerator(p, splice_params='single')
+dg = DataGenerator(p, splice_params='whole')
 dg.generate_data()
-
-'''
-TODO
-Okay so here's the approach we're going to take to generating data
-1. We model the ASP constructs wth python 
-2. We can then template this to introduce variations
-3. We then add CNL variations to each modeled ASP construct - this gives us super fine grain control over each cnl statement
-
-
-'''
 
 
 
