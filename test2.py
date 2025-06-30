@@ -16,21 +16,15 @@ p.add_variations(variations)
 # Create and setup the data generator object
 dg = DataGenerator(p, splice_params='whole')
 
-# Add CNL templates using the placeholder key for max flexibility
 templates = {
-    'person/1:fact': '{1} is defs a {entity}.'
+    'person/1:fact': '{1} is defs a person.', 
+    'human/1:fact': '{1} is human.',
 }
 
 dg.add_cnl_templates(templates)
 dg.generate_data()
 
 
-'''
-right now, we look for predicates, then we try to generate a CNL statement with a template
-make sure that this makes sense and applies
-if we have entity/fact -> make sure this makes sense accross all rules for that entity
-also make sure that evaulating by entity even makes sense in and of itself? 
-'''
 
 
 
@@ -63,7 +57,7 @@ con: a little bit more up-front effort when moedelling the problem
 '''
 
 
-# 5. Whole program as a single splice
+
 
 
 

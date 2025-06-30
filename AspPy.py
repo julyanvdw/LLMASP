@@ -102,7 +102,6 @@ class DataGenerator:
         if splice_params is not None:
             self.add_splice_params(splice_params)
 
-
     def add_program(self, program):
         self.modeled_programs.append(program)
 
@@ -113,20 +112,13 @@ class DataGenerator:
         self.cnl_templates = templates
 
     def get_cnl_template(self, predicate, arity, construct_type, mapping=None):
-    # Try concrete key first
+        """
+        Looks up a CNL template for the given predicate/arity/type.
+        Only supports explicit keys (no placeholder substitution).
+        """
         key = f"{predicate}/{arity}:{construct_type}"
         if hasattr(self, 'cnl_templates') and key in self.cnl_templates:
             return self.cnl_templates[key]
-        # Try placeholder key if mapping is provided
-        if mapping:
-            for template_key in getattr(self, 'cnl_templates', {}):
-                if template_key.endswith(f"/{arity}:{construct_type}"):
-                    # Substitute mapping into template_key and compare
-                    test_key = template_key
-                    for k, v in mapping.items():
-                        test_key = test_key.replace(f"{{{k}}}", v)
-                    if test_key == key:
-                        return self.cnl_templates[template_key]
         return None
 
     def _substitute_placeholders(self, obj, mapping):
@@ -199,16 +191,11 @@ class DataGenerator:
             predicate = f.predicate[0]
             terms = [term[0] for term in f.terms]
             arity = len(terms)
-            custom_template = self.get_cnl_template(predicate, arity, "fact", mapping)
+            custom_template = self.get_cnl_template(predicate, arity, "fact")
             if custom_template:
                 cnl = custom_template
-                # Substitute {1}, {2}, ... with terms (no slashes or backslashes)
                 for i, term in enumerate(terms):
                     cnl = cnl.replace(f"{{{i+1}}}", str(term))
-                # Substitute placeholders from mapping (e.g., {entity})
-                if mapping:
-                    for k, v in mapping.items():
-                        cnl = cnl.replace(f"{{{k}}}", v)
                 parts.append(cnl)
             else:
                 parts.append(t.module.render_fact(predicate, terms))
@@ -223,13 +210,9 @@ class DataGenerator:
                 cnl = custom_template
                 for i, term in enumerate(head_terms):
                     cnl = cnl.replace(f"{{{i+1}}}", str(term))
-                # Optionally, add body_literals if your template uses them
                 body_literals = [lit[0] for lit in r.body_literals]
                 for i, lit in enumerate(body_literals):
                     cnl = cnl.replace(f"{{body{i+1}}}", str(lit))
-                if mapping:
-                    for k, v in mapping.items():
-                        cnl = cnl.replace(f"{{{k}}}", v)
                 parts.append(cnl)
             else:
                 body_literals = [lit[0] for lit in r.body_literals]
@@ -237,38 +220,42 @@ class DataGenerator:
 
         # Constraints
         for c in program.constraints:
-            custom_template = self.get_cnl_template("", 0, "constraint")
+            body_literals = [lit[0] for lit in c.body_literals]
+            custom_template = self.get_cnl_template("", len(body_literals), "constraint")
             if custom_template:
                 cnl = custom_template
-                if mapping:
-                    for k, v in mapping.items():
-                        cnl = cnl.replace(f"{{{k}}}", v)
+                for i, lit in enumerate(body_literals):
+                    cnl = cnl.replace(f"{{body{i+1}}}", str(lit))
                 parts.append(cnl)
             else:
-                body_literals = [lit[0] for lit in c.body_literals]
                 parts.append(t.module.render_integrity_constraint(body_literals))
 
         # Cardinality constraints
         for cc in program.card_constraints:
+            lower = cc.lower[0]
+            upper = cc.upper[0]
             head_predicate = cc.head_predicate[0]
             head_terms = [term[0] for term in cc.head_terms]
             arity = len(head_terms)
+            condition_predicate = cc.condition_predicate[0]
+            condition_terms = [term[0] for term in cc.condition_terms]
+            apply_if_predicate = cc.apply_if_predicate[0]
+            apply_if_terms = [term[0] for term in cc.apply_if_terms]
             custom_template = self.get_cnl_template(head_predicate, arity, "card")
             if custom_template:
                 cnl = custom_template
                 for i, term in enumerate(head_terms):
                     cnl = cnl.replace(f"{{{i+1}}}", str(term))
-                if mapping:
-                    for k, v in mapping.items():
-                        cnl = cnl.replace(f"{{{k}}}", v)
+                cnl = cnl.replace("{lower}", str(lower))
+                cnl = cnl.replace("{upper}", str(upper))
+                cnl = cnl.replace("{condition_predicate}", str(condition_predicate))
+                for i, term in enumerate(condition_terms):
+                    cnl = cnl.replace(f"{{condition_term{i+1}}}", str(term))
+                cnl = cnl.replace("{apply_if_predicate}", str(apply_if_predicate))
+                for i, term in enumerate(apply_if_terms):
+                    cnl = cnl.replace(f"{{apply_if_term{i+1}}}", str(term))
                 parts.append(cnl)
             else:
-                lower = cc.lower[0]
-                upper = cc.upper[0]
-                condition_predicate = cc.condition_predicate[0]
-                condition_terms = [term[0] for term in cc.condition_terms]
-                apply_if_predicate = cc.apply_if_predicate[0]
-                apply_if_terms = [term[0] for term in cc.apply_if_terms]
                 parts.append(t.module.render_cardinality_constraint(
                     lower, upper,
                     head_predicate, head_terms,
