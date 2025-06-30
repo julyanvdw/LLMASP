@@ -7,8 +7,20 @@ p.add_fact('person', ['Alice'], {
     'hard': 'Alice is a person HARD', 
 })
 
+p.add_fact('dog', ['Rover'], {
+    'fliped': 'Rover is not not a dog', 
+    'hard': 'Alice is a person HARD', 
+})
 
-dg = DataGenerator(p, splice_params='whole')
+
+
+levels = [
+    ['easy', 'fliped'],
+    ['hard']
+]
+
+
+dg = DataGenerator(p, splice_params='whole', diffculty_levels=levels)
 dg.generate_data()
 
 

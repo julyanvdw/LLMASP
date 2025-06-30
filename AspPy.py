@@ -104,6 +104,7 @@ class DataGenerator:
         self.modeled_programs = []
         self.data_items = []
         self.splice_params = ''
+        self.diffculty_levels = []
 
         if program is not None:
             self.add_program(program)
@@ -447,12 +448,7 @@ class DataGenerator:
 
         # GENERATE ASP COMPONENTS
 
-        levels = [
-            ['easy'], 
-            ['hard']
-        ]
-
-        for level in levels:
+        for level in self.diffculty_levels:
             for p in self.modeled_programs:
                 for variation in self._generate_variations(p, p.get_variations()):
                     for splice in self._generate_splices(variation, self.splice_params):
