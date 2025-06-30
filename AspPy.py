@@ -16,24 +16,27 @@ def ensure_list(val):
 # === ASP Construct Classes ===
 
 class Fact:
-    def __init__(self, predicate, terms):
+    def __init__(self, predicate, terms, cnl_map=None):
         self.predicate = ensure_list(predicate)
         self.terms = [ensure_list(t) for t in terms]
+        self.cnl_map = cnl_map or {}
 
 class Rule:
-    def __init__(self, head_predicate, head_terms, body_literals):
+    def __init__(self, head_predicate, head_terms, body_literals, cnl_map=None):
         self.head_predicate = ensure_list(head_predicate)
         self.head_terms = [ensure_list(t) for t in head_terms]
         self.body_literals = [ensure_list(lit) for lit in body_literals]
+        self.cnl_map = cnl_map or {}
         
 class Constraint:
-    def __init__(self, body_literals):
+    def __init__(self, body_literals, cnl_map=None):
         self.body_literals = [ensure_list(lit) for lit in body_literals]
+        self.cnl_map = cnl_map or {}
 
 class CardinalityConstraint:
     def __init__(self, lower, upper, head_predicate, head_terms,
                  condition_predicate, condition_terms,
-                 apply_if_predicate, apply_if_terms):
+                 apply_if_predicate, apply_if_terms, cnl_map=None):
         self.lower = ensure_list(lower)
         self.upper = ensure_list(upper)
         self.head_predicate = ensure_list(head_predicate)
@@ -42,9 +45,9 @@ class CardinalityConstraint:
         self.condition_terms = [ensure_list(t) for t in condition_terms]
         self.apply_if_predicate = ensure_list(apply_if_predicate)
         self.apply_if_terms = [ensure_list(t) for t in apply_if_terms]
+        self.cnl_map = cnl_map or {}
 
 # === ASPProgram Class ===
-
 
 class ASPProgram:
     def __init__(self, template_dir='./ASP-construct-templates'):
@@ -75,17 +78,23 @@ class ASPProgram:
     def get_variations(self):
         return self.variations
 
-    def add_fact(self, predicate, terms):
-        self.facts.append(Fact(predicate, terms))
+    def add_fact(self, predicate, terms, cnl_map=None):
+        self.facts.append(Fact(predicate, terms, cnl_map))
 
-    def add_rule(self, head_predicate, head_terms, body_literals):
-        self.rules.append(Rule(head_predicate, head_terms, body_literals))
+    def add_rule(self, head_predicate, head_terms, body_literals, cnl_map=None):
+        self.rules.append(Rule(head_predicate, head_terms, body_literals, cnl_map))
 
-    def add_constraint(self, body_literals):
-        self.constraints.append(Constraint(body_literals))
+    def add_constraint(self, body_literals, cnl_map=None):
+        self.constraints.append(Constraint(body_literals, cnl_map))
 
-    def add_cardinality_constraint(self, *args):
-        self.card_constraints.append(CardinalityConstraint(*args))
+    def add_cardinality_constraint(self, lower, upper, head_predicate, head_terms,
+                                   condition_predicate, condition_terms,
+                                   apply_if_predicate, apply_if_terms, cnl_map=None):
+        self.card_constraints.append(CardinalityConstraint(
+            lower, upper, head_predicate, head_terms,
+            condition_predicate, condition_terms,
+            apply_if_predicate, apply_if_terms, cnl_map
+        ))
 
 # === DataGenerator Class ===
  
@@ -108,19 +117,6 @@ class DataGenerator:
     def add_splice_params(self,splice_params):
         self.splice_params = splice_params
 
-    def add_cnl_templates(self, templates):
-        self.cnl_templates = templates
-
-    def get_cnl_template(self, predicate, arity, construct_type, mapping=None):
-        """
-        Looks up a CNL template for the given predicate/arity/type.
-        Only supports explicit keys (no placeholder substitution).
-        """
-        key = f"{predicate}/{arity}:{construct_type}"
-        if hasattr(self, 'cnl_templates') and key in self.cnl_templates:
-            return self.cnl_templates[key]
-        return None
-
     def _substitute_placeholders(self, obj, mapping):
         """Recursively substitute placeholders in strings, lists, and objects."""
         if isinstance(obj, str):
@@ -132,7 +128,11 @@ class DataGenerator:
         elif hasattr(obj, '__dict__'):
             new_obj = copy.deepcopy(obj)
             for attr, value in new_obj.__dict__.items():
-                setattr(new_obj, attr, self._substitute_placeholders(value, mapping))
+                if attr == 'cnl_map' and isinstance(value, dict):
+                    # Substitute placeholders in all CNL map values
+                    new_obj.cnl_map = {k: self._substitute_placeholders(v, mapping) for k, v in value.items()}
+                else:
+                    setattr(new_obj, attr, self._substitute_placeholders(value, mapping))
             return new_obj
         else:
             return obj
@@ -178,91 +178,6 @@ class DataGenerator:
                 condition_predicate, condition_terms,
                 apply_if_predicate, apply_if_terms
             ))
-        return '\n'.join(parts)
-    
-    def _render_CNL_component(self, program, difficulty_level, mapping=None):
-        template_dir = program.template_dir if hasattr(program, 'template_dir') else './ASP-construct-templates'
-        env = Environment(loader=FileSystemLoader(template_dir))
-        t = env.get_template('cnl_core.j2')
-        parts = []
-
-        # Facts
-        for f in program.facts:
-            predicate = f.predicate[0]
-            terms = [term[0] for term in f.terms]
-            arity = len(terms)
-            custom_template = self.get_cnl_template(predicate, arity, "fact")
-            if custom_template:
-                cnl = custom_template
-                for i, term in enumerate(terms):
-                    cnl = cnl.replace(f"{{{i+1}}}", str(term))
-                parts.append(cnl)
-            else:
-                parts.append(t.module.render_fact(predicate, terms))
-
-        # Rules
-        for r in program.rules:
-            head_predicate = r.head_predicate[0]
-            head_terms = [term[0] for term in r.head_terms]
-            arity = len(head_terms)
-            custom_template = self.get_cnl_template(head_predicate, arity, "rule")
-            if custom_template:
-                cnl = custom_template
-                for i, term in enumerate(head_terms):
-                    cnl = cnl.replace(f"{{{i+1}}}", str(term))
-                body_literals = [lit[0] for lit in r.body_literals]
-                for i, lit in enumerate(body_literals):
-                    cnl = cnl.replace(f"{{body{i+1}}}", str(lit))
-                parts.append(cnl)
-            else:
-                body_literals = [lit[0] for lit in r.body_literals]
-                parts.append(t.module.render_rule(head_predicate, head_terms, body_literals))
-
-        # Constraints
-        for c in program.constraints:
-            body_literals = [lit[0] for lit in c.body_literals]
-            custom_template = self.get_cnl_template("", len(body_literals), "constraint")
-            if custom_template:
-                cnl = custom_template
-                for i, lit in enumerate(body_literals):
-                    cnl = cnl.replace(f"{{body{i+1}}}", str(lit))
-                parts.append(cnl)
-            else:
-                parts.append(t.module.render_integrity_constraint(body_literals))
-
-        # Cardinality constraints
-        for cc in program.card_constraints:
-            lower = cc.lower[0]
-            upper = cc.upper[0]
-            head_predicate = cc.head_predicate[0]
-            head_terms = [term[0] for term in cc.head_terms]
-            arity = len(head_terms)
-            condition_predicate = cc.condition_predicate[0]
-            condition_terms = [term[0] for term in cc.condition_terms]
-            apply_if_predicate = cc.apply_if_predicate[0]
-            apply_if_terms = [term[0] for term in cc.apply_if_terms]
-            custom_template = self.get_cnl_template(head_predicate, arity, "card")
-            if custom_template:
-                cnl = custom_template
-                for i, term in enumerate(head_terms):
-                    cnl = cnl.replace(f"{{{i+1}}}", str(term))
-                cnl = cnl.replace("{lower}", str(lower))
-                cnl = cnl.replace("{upper}", str(upper))
-                cnl = cnl.replace("{condition_predicate}", str(condition_predicate))
-                for i, term in enumerate(condition_terms):
-                    cnl = cnl.replace(f"{{condition_term{i+1}}}", str(term))
-                cnl = cnl.replace("{apply_if_predicate}", str(apply_if_predicate))
-                for i, term in enumerate(apply_if_terms):
-                    cnl = cnl.replace(f"{{apply_if_term{i+1}}}", str(term))
-                parts.append(cnl)
-            else:
-                parts.append(t.module.render_cardinality_constraint(
-                    lower, upper,
-                    head_predicate, head_terms,
-                    condition_predicate, condition_terms,
-                    apply_if_predicate, apply_if_terms
-                ))
-
         return '\n'.join(parts)
 
     def _generate_splices(self, variation, splice_param):
@@ -437,26 +352,26 @@ class DataGenerator:
     def generate_data(self):
 
         # GENERATE ASP COMPONENTS
-        asp_components = []
+        asp_splices = []
 
         for p in self.modeled_programs:
             for variation in self._generate_variations(p, p.get_variations()):
                 for splice in self._generate_splices(variation, self.splice_params):
-                    asp_components.append(splice)
+                    print(self._render_ASP_component(splice))
 
-        for item in asp_components:
-            print(self._render_ASP_component(item))
+                    for fact in splice.facts:
+                        cnl_easy = fact.cnl_map.get('easy')
+                        print(cnl_easy)
 
-        print("=======")
+                    print()
 
-        # GENERATE CNL AND NL COMPONENTS 
-        difficulty_levels = ['plain']
+                    asp_splices.append(splice)
 
-        for asp_component in asp_components:
-            for difficulty_level in difficulty_levels:
-                #Generate CNL statement
-                cnl_component_rendered_raw = self._render_CNL_component(asp_component, difficulty_level)
-                print(cnl_component_rendered_raw)
+        # for item in asp_components:
+        #     print(self._render_ASP_component(item))
+
+        # print("=======")
+
                 
 
 

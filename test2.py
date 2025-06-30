@@ -1,59 +1,30 @@
 from AspPy import ASPProgram, DataGenerator
 
-# FACTS WITH VARIATIONS AND TEMPLATES
-# Create the project obeject
 p = ASPProgram()
 
-# Add lines
-p.add_fact('{entity}', ['Alice'])
+p.add_fact('{entity}', ['Alice'], {
+    'easy': 'Alice is a {entity}'})
+p.add_fact('dog', ['Rover'], {
+    'easy': 'doggy rover'})
 
-# Add variations
-variations = {
+v = {
     'entity': ['person', 'human']
 }
-p.add_variations(variations)
+p.add_variations(v)
 
-# Create and setup the data generator object
-dg = DataGenerator(p, splice_params='whole')
 
-templates = {
-    'person/1:fact': '{1} is defs a person.', 
-    'human/1:fact': '{1} is human.',
-}
 
-dg.add_cnl_templates(templates)
+dg = DataGenerator(p, splice_params='single')
 dg.generate_data()
-
-
-
-
-
-
-
-
-
-
 
 '''
 TODO
-1. check the template with other constructs
-2. make the templates work with variations
+Okay so here's the approach we're going to take to generating data
+1. We model the ASP constructs wth python 
+2. We can then template this to introduce variations
+3. We then add CNL variations to each modeled ASP construct - this gives us super fine grain control over each cnl statement
 
-for rules: 
-1. the default template is bad
 
-
-within a template, we might make use of predicates. For example in a rule, we might say if {1} teaches... but 'teaches' 
-is a predicate in and of itself... 
-
-And then for difficulty
-we could extend this by just manually hardcoding different difficulty variations: 
-templates_plain = {}
-templates_negated = {}
-
-pro: super fine-grained control coupled with combinatorial explosive power
-pro: super extensible (can add more difficutlty variations)
-con: a little bit more up-front effort when moedelling the problem
 '''
 
 
