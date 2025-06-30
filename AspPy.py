@@ -100,7 +100,7 @@ class ASPProgram:
  
 class DataGenerator:
 
-    def __init__(self, program=None, splice_params=None):
+    def __init__(self, program=None, splice_params=None, diffculty_levels=None):
         self.modeled_programs = []
         self.data_items = []
         self.splice_params = ''
@@ -111,11 +111,17 @@ class DataGenerator:
         if splice_params is not None:
             self.add_splice_params(splice_params)
 
+        if diffculty_levels is not None:
+            self.add_diffculty_levels(diffculty_levels)
+
     def add_program(self, program):
         self.modeled_programs.append(program)
 
     def add_splice_params(self,splice_params):
         self.splice_params = splice_params
+
+    def add_diffculty_levels(self,diffculty_levels):
+        self.diffculty_levels = diffculty_levels
 
     def _substitute_placeholders(self, obj, mapping):
         """Recursively substitute placeholders in strings, lists, and objects."""
@@ -353,9 +359,16 @@ class DataGenerator:
         """
         Render the CNL version of the program (splice) according to the provided difficulty_modifiers.
         For each construct, if any modifier in difficulty_modifiers is present in cnl_map, use it.
+        If not, fall back to the default template in cnl_core.j2.
         """
+        # Load the CNL template
+        env = Environment(loader=FileSystemLoader(program.template_dir))
+        t = env.get_template('cnl_core.j2').module
+
         parts = []
+        # Facts
         for f in program.facts:
+            found = False
             for mod in difficulty_modifiers:
                 cnl = f.cnl_map.get(mod)
                 if cnl:
@@ -363,8 +376,15 @@ class DataGenerator:
                         parts.extend(cnl)
                     else:
                         parts.append(cnl)
-                    break  # Only use the first matching modifier per construct
+                    found = True
+                    break
+            if not found:
+                predicate = f.predicate[0]
+                terms = [term[0] for term in f.terms]
+                parts.append(t.render_fact(predicate, terms))
+        # Rules
         for r in program.rules:
+            found = False
             for mod in difficulty_modifiers:
                 cnl = r.cnl_map.get(mod)
                 if cnl:
@@ -372,8 +392,16 @@ class DataGenerator:
                         parts.extend(cnl)
                     else:
                         parts.append(cnl)
+                    found = True
                     break
+            if not found:
+                head_predicate = r.head_predicate[0]
+                head_terms = [term[0] for term in r.head_terms]
+                body_literals = [lit[0] for lit in r.body_literals]
+                parts.append(t.render_rule(head_predicate, head_terms, body_literals))
+        # Constraints
         for c in program.constraints:
+            found = False
             for mod in difficulty_modifiers:
                 cnl = c.cnl_map.get(mod)
                 if cnl:
@@ -381,8 +409,14 @@ class DataGenerator:
                         parts.extend(cnl)
                     else:
                         parts.append(cnl)
+                    found = True
                     break
+            if not found:
+                body_literals = [lit[0] for lit in c.body_literals]
+                parts.append(t.render_integrity_constraint(body_literals))
+        # Cardinality Constraints
         for cc in program.card_constraints:
+            found = False
             for mod in difficulty_modifiers:
                 cnl = cc.cnl_map.get(mod)
                 if cnl:
@@ -390,7 +424,23 @@ class DataGenerator:
                         parts.extend(cnl)
                     else:
                         parts.append(cnl)
+                    found = True
                     break
+            if not found:
+                lower = cc.lower[0]
+                upper = cc.upper[0]
+                head_predicate = cc.head_predicate[0]
+                head_terms = [term[0] for term in cc.head_terms]
+                condition_predicate = cc.condition_predicate[0]
+                condition_terms = [term[0] for term in cc.condition_terms]
+                apply_if_predicate = cc.apply_if_predicate[0]
+                apply_if_terms = [term[0] for term in cc.apply_if_terms]
+                parts.append(t.render_cardinality_constraint(
+                    lower, upper,
+                    head_predicate, head_terms,
+                    condition_predicate, condition_terms,
+                    apply_if_predicate, apply_if_terms
+                ))
         return '\n'.join(parts)
 
     def generate_data(self):

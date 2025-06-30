@@ -2,15 +2,11 @@ from AspPy import ASPProgram, DataGenerator
 
 p = ASPProgram()
 
-p.add_fact('{entity}', ['Alice'], {
-    'easy': 'Alice is a {entity} EASY', 
-    'hard': 'Alice is a {entity} HARD', 
+p.add_fact('person', ['Alice'], {
+    'easy': 'Alice is a person EASY', 
+    'hard': 'Alice is a person HARD', 
 })
 
-v = {
-    'entity': ['person', 'human']
-}
-p.add_variations(v)
 
 dg = DataGenerator(p, splice_params='whole')
 dg.generate_data()
