@@ -2,14 +2,13 @@ from AspPy import ASPProgram, DataGenerator
 
 p = ASPProgram()
 
-# Add a rule: happy(X) :- person(X), dog(Y).
-p.add_rule('happy', ['{names}'], [['person({names})'], ['dog({dogs})']], {
-    'easy': 'If {names} is a person, and {dogs} is a dog, then {names} is happy'
+p.add_fact('{entity}', ['Alice'], {
+    'easy': 'Alice is a {entity} EASY', 
+    'hard': 'Alice is a {entity} HARD', 
 })
 
 v = {
-    'names' : ['Alice', 'Bob'], 
-    'dogs' : ['Rover', 'Pluto'], 
+    'entity': ['person', 'human']
 }
 p.add_variations(v)
 

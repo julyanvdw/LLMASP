@@ -349,28 +349,68 @@ class DataGenerator:
         else:
             raise ValueError(f"Unknown splicing strategy: {strategy}")
 
+    def _render_CNL_component(self, program, difficulty_modifiers):
+        """
+        Render the CNL version of the program (splice) according to the provided difficulty_modifiers.
+        For each construct, if any modifier in difficulty_modifiers is present in cnl_map, use it.
+        """
+        parts = []
+        for f in program.facts:
+            for mod in difficulty_modifiers:
+                cnl = f.cnl_map.get(mod)
+                if cnl:
+                    if isinstance(cnl, list):
+                        parts.extend(cnl)
+                    else:
+                        parts.append(cnl)
+                    break  # Only use the first matching modifier per construct
+        for r in program.rules:
+            for mod in difficulty_modifiers:
+                cnl = r.cnl_map.get(mod)
+                if cnl:
+                    if isinstance(cnl, list):
+                        parts.extend(cnl)
+                    else:
+                        parts.append(cnl)
+                    break
+        for c in program.constraints:
+            for mod in difficulty_modifiers:
+                cnl = c.cnl_map.get(mod)
+                if cnl:
+                    if isinstance(cnl, list):
+                        parts.extend(cnl)
+                    else:
+                        parts.append(cnl)
+                    break
+        for cc in program.card_constraints:
+            for mod in difficulty_modifiers:
+                cnl = cc.cnl_map.get(mod)
+                if cnl:
+                    if isinstance(cnl, list):
+                        parts.extend(cnl)
+                    else:
+                        parts.append(cnl)
+                    break
+        return '\n'.join(parts)
+
     def generate_data(self):
 
         # GENERATE ASP COMPONENTS
-        asp_splices = []
 
-        for p in self.modeled_programs:
-            for variation in self._generate_variations(p, p.get_variations()):
-                for splice in self._generate_splices(variation, self.splice_params):
-                    print(self._render_ASP_component(splice))
+        levels = [
+            ['easy'], 
+            ['hard']
+        ]
 
-                    for rule in splice.rules:
-                        cnl_easy = rule.cnl_map.get('easy')
-                        print(cnl_easy)
+        for level in levels:
+            for p in self.modeled_programs:
+                for variation in self._generate_variations(p, p.get_variations()):
+                    for splice in self._generate_splices(variation, self.splice_params):
+                        print(self._render_ASP_component(splice))
+                        print(self._render_CNL_component(splice, level))
+                        print()
 
-                    print()
-
-                    asp_splices.append(splice)
-
-        # for item in asp_components:
-        #     print(self._render_ASP_component(item))
-
-        # print("=======")
+       
 
                 
 
