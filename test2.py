@@ -1,40 +1,69 @@
 from AspPy import ASPProgram, DataGenerator
 
+'''
+Program to be modelled
+node(1..3).
+color("red").
+color("green").
+color("blue").
+connected_to(1,X) :- node(1), node(X), X = 2.
+connected_to(1,X) :- node(1), node(X), X = 3.
+connected_to(2,X) :- node(2), node(X), X = 1.
+connected_to(2,X) :- node(2), node(X), X = 3.
+connected_to(3,X) :- node(3), node(X), X = 1.
+connected_to(3,X) :- node(3), node(X), X = 2.
+1 <= {assigned_to(ND_D,CLR_D): color(CLR_D)} <= 1 :- node(ND_D).
+:- connected_to(X,Y), node(X), assigned_to(X,C), node(Y), assigned_to(Y,C), color(C).
+'''
+
 p = ASPProgram()
 
-# p.add_fact('person', ['Alice'], {'easy': 'Alice is a person'})
+p.add_fact('node', ['1..3'], {'easy' : 'a node goes from 1 to 3'})
+p.add_fact('color', ['red'], {'easy' : 'red is a color'})
+p.add_fact('color', ['blue'], {'easy' : 'blue is a color'})
+p.add_fact('color', ['green'], {'easy' : 'green is a color'})
 
-# greater(X) :- value(X, V), V > 10.
 p.add_rule(
-    'greater', ['X'],
+    'connected_to', 
+    ['1', 'X'],
     [
-        ['value', ['X', 'V']],
-        ['V > 10', []]
-    ], 
-    {'easy': 'blah'}
+        ['node', ['1']],
+        ['node', ['X']],
+        ['X = 2', []]
+    ],
+    {'easy': 'node 1 is connected to node 2'}
 )
 
-# p.add_fact('person', ['Alice'], {
-#     # 'easy': 'Alice is a person EASY', 
-#     # 'hard': 'Alice is a person HARD', 
-# })
+p.add_cardinality_constraint(
+    lower='1',
+    upper='1',
+    head_predicate='assigned_to',
+    head_terms=['ND_D', 'CLR_D'],
+    condition_predicate='color',
+    condition_terms=['CLR_D'],
+    apply_if_predicate='node',
+    apply_if_terms=['ND_D'],
+    cnl_map={'easy': 'each node is assigned exactly one color'}
+)
 
-# p.add_fact('dog', ['Rover'], {
-#     # 'fliped': 'Rover is not not a dog', 
-#     # 'hard': 'Alice is a person HARD', 
-# })
+p.add_constraint(
+    body_literals=[
+        ['connected_to', ['X', 'Y']],
+        ['node', ['X']],
+        ['assigned_to', ['X', 'C']],
+        ['node', ['Y']],
+        ['assigned_to', ['Y', 'C']],
+        ['color', ['C']]
+    ],
+    cnl_map={'easy': 'no two connected nodes can have the same color'}
+)
 
 
 
-# levels = [
-#     ['easy', 'fliped'],
-#     ['hard']
-# ]
 
 
 dg = DataGenerator(p, splice_params='whole', diffculty_levels=[['easy']])
 dg.generate_data()
-
 
 
 

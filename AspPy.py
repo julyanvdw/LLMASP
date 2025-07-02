@@ -171,8 +171,17 @@ class DataGenerator:
             ]
             parts.append(t.render_rule(head_predicate, head_terms, body_literals))
         for c in program.constraints:
-            body_literals = [lit[0] for lit in c.body_literals]
-            parts.append(t.render_integrity_constraint(body_literals))
+            # Render each body literal as predicate(term1,term2,...)
+            body = []
+            for lit in c.body_literals:
+                pred = lit[0]
+                terms = lit[1] if len(lit) > 1 else []
+                if terms:
+                    body.append(f"{pred}({','.join(terms)})")
+                else:
+                    body.append(f"{pred}")
+            constraint_str = ":- " + ", ".join(body) + "."
+            parts.append(constraint_str)
         for cc in program.card_constraints:
             lower = cc.lower[0]
             upper = cc.upper[0]
@@ -188,7 +197,7 @@ class DataGenerator:
                 condition_predicate, condition_terms,
                 apply_if_predicate, apply_if_terms
             ))
-        return '\n'.join(parts)
+        return "\n".join(parts)
 
     def _generate_splices(self, variation, splice_param):
         """
@@ -456,6 +465,7 @@ class DataGenerator:
                 for variation in self._generate_variations(p, p.get_variations()):
                     for splice in self._generate_splices(variation, self.splice_params):
                         print(self._render_ASP_component(splice))
+                        print()
                         print(self._render_CNL_component(splice, level))
                         print()
 
