@@ -67,7 +67,49 @@ dg.generate_data()
 
 
 
+'''
+#no group
+p.add_line('color(red)', {red is a color})
+p.add_line('color(blue)', {blue is a color})
+p.add_line('color(green)', {green is a color})
 
+#group option 1 - all or nothing
+p.add_group([
+        p.add_line('color(red)', {red is a color})
+        p.add_line('color(blue)', {blue is a color})
+        p.add_line('color(green)', {green is a color})
+    ], 
+    {'easy' : 'red, blue and green are colors'}
+)
+
+#group option 2
+p.add_group([
+        p.add_line('color(red)', {easy: 'red is a color'})
+        p.add_line('color(blue)', {easy: 'blue is a color'})
+        p.add_line('color(green)', {easy: 'green is a color'})
+    ], 
+    {'easy\3' : '{\1}, {\2} and {\3} are colors',
+    'easy\2' : '{\1} and {\2} are colors'},
+    'hard\3' : 'use {\1}, {\2} and {\3}
+    }
+)
+
+#no group
+node(A).
+node(B).
+node(C).
+
+#group option 2
+p.add_group([
+    p.add_line('node(A)', {'easy': 'A is a node'}),
+    p.add_line('node(B)', {'easy': 'B is a node'}),
+    p.add_line('node(C)', {'easy': 'C is a node'}),
+], {'easy\3' : '{\1}, {\2} and {\3} are nodes'}
+)
+
+
+
+'''
 
 
 # # 1. Multi-granularity (default: sliding window)
