@@ -104,7 +104,7 @@ class DataGenerator:
         self.modeled_programs = []
         self.data_items = []
         self.splice_params = ''
-        self.diffculty_levels = []
+        self.diffculty_levels = ['default']
 
         if program is not None:
             self.add_program(program)
@@ -165,7 +165,10 @@ class DataGenerator:
         for r in program.rules:
             head_predicate = r.head_predicate[0]
             head_terms = [term[0] for term in r.head_terms]
-            body_literals = [lit[0] for lit in r.body_literals]
+            body_literals = [
+                f"{lit[0]}({', '.join(lit[1])})" if lit[1] else lit[0]
+                for lit in r.body_literals
+            ]
             parts.append(t.render_rule(head_predicate, head_terms, body_literals))
         for c in program.constraints:
             body_literals = [lit[0] for lit in c.body_literals]

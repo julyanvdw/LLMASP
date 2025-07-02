@@ -2,25 +2,37 @@ from AspPy import ASPProgram, DataGenerator
 
 p = ASPProgram()
 
-p.add_fact('person', ['Alice'], {
-    'easy': 'Alice is a person EASY', 
-    'hard': 'Alice is a person HARD', 
-})
+# p.add_fact('person', ['Alice'], {'easy': 'Alice is a person'})
 
-p.add_fact('dog', ['Rover'], {
-    'fliped': 'Rover is not not a dog', 
-    'hard': 'Alice is a person HARD', 
-})
+# greater(X) :- value(X, V), V > 10.
+p.add_rule(
+    'greater', ['X'],
+    [
+        ['value', ['X', 'V']],
+        ['V > 10', []]
+    ], 
+    {'easy': 'blah'}
+)
+
+# p.add_fact('person', ['Alice'], {
+#     # 'easy': 'Alice is a person EASY', 
+#     # 'hard': 'Alice is a person HARD', 
+# })
+
+# p.add_fact('dog', ['Rover'], {
+#     # 'fliped': 'Rover is not not a dog', 
+#     # 'hard': 'Alice is a person HARD', 
+# })
 
 
 
-levels = [
-    ['easy', 'fliped'],
-    ['hard']
-]
+# levels = [
+#     ['easy', 'fliped'],
+#     ['hard']
+# ]
 
 
-dg = DataGenerator(p, splice_params='whole', diffculty_levels=levels)
+dg = DataGenerator(p, splice_params='whole', diffculty_levels=[['easy']])
 dg.generate_data()
 
 
