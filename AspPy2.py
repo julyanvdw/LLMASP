@@ -43,20 +43,55 @@ class Line:
                 new_nl_map[key] = val
         return Line(new_asp_code, new_cnl_map, new_nl_map)
 
+class Group:
+    """
+    Represents a group of lines with a group-level NL map.
+    """
+    def __init__(self, lines, nl_map=None):
+        self.lines = lines  # List of Line objects
+        self.nl_map = nl_map or {}
+
+    def substitute(self, mapping):
+        """
+        Substitute ^VAR^ placeholders in the group's NL map.
+        """
+        new_nl_map = {}
+        for key, val in self.nl_map.items():
+            if isinstance(val, str):
+                new_val = val
+                for k, v in mapping.items():
+                    new_val = new_val.replace(f'^{k}^', v)
+                new_nl_map[key] = new_val
+            else:
+                new_nl_map[key] = val
+        return Group(self.lines, new_nl_map)
+
 class ASPProgram:
     """
-    Stores an ASP program as a list of Line objects.
+    Stores an ASP program as a list of Line objects and groups.
     """
     def __init__(self):
         self.lines = []  # List of Line objects
         self.variations = {}
+        self.groups = []  # List of Group objects
 
     def add_line(self, asp_code, cnl_map=None, nl_map=None):
         """
         Add a line of ASP code (as a string) to the program.
         Optionally, attach a CNL and NL mapping.
+        Returns the Line object for group referencing.
         """
-        self.lines.append(Line(asp_code, cnl_map, nl_map))
+        line = Line(asp_code, cnl_map, nl_map)
+        self.lines.append(line)
+        return line
+
+    def add_group(self, lines, nl_map=None):
+        """
+        Add a group of lines with a group-level NL map.
+        """
+        group = Group(lines, nl_map)
+        self.groups.append(group)
+        return group
 
     def add_variations(self, variations):
         """
@@ -69,20 +104,17 @@ class ASPProgram:
         return self.variations
 
     def get_lines(self):
-        """
-        Return the list of Line objects.
-        """
         return self.lines
 
+    def get_groups(self):
+        return self.groups
+
     def __str__(self):
-        """
-        Render the ASP program as a string (just the ASP code).
-        """
         return "\n".join(str(line) for line in self.lines)
 
 class DataGenerator:
     """
-    Generates data from ASPProgram objects, supporting text-based variations and splicing.
+    Generates data from ASPProgram objects, supporting text-based variations, splicing, and group NLs.
     """
     def __init__(self, program=None, splice_params='whole'):
         self.modeled_programs = []
@@ -96,15 +128,15 @@ class DataGenerator:
     def add_splice_params(self, splice_params):
         self.splice_params = splice_params
 
-    def _substitute_placeholders(self, line, mapping):
+    def _substitute_placeholders(self, obj, mapping):
         """
-        Substitute ^VAR^ placeholders in a Line object using the mapping.
+        Substitute ^VAR^ placeholders in a Line or Group object using the mapping.
         """
-        return line.substitute(mapping)
+        return obj.substitute(mapping)
 
     def _generate_variations(self, program, variations):
         """
-        Generate all combinations of variations for the program.
+        Generate all combinations of variations for the program, including lines and groups.
         """
         if not variations:
             yield program
@@ -114,82 +146,26 @@ class DataGenerator:
         for values in itertools.product(*[variations[k] for k in keys]):
             mapping = dict(zip(keys, values))
             new_prog = copy.deepcopy(program)
+            # Substitute in lines
             new_prog.lines = [self._substitute_placeholders(line, mapping) for line in program.lines]
+            # Substitute in groups
+            new_prog.groups = []
+            for group in program.groups:
+                # Find the corresponding new Line objects in new_prog for this group
+                new_lines = []
+                for orig_line in group.lines:
+                    # Match by asp_code after substitution
+                    for new_line in new_prog.lines:
+                        if new_line.asp_code == self._substitute_placeholders(orig_line, mapping).asp_code:
+                            new_lines.append(new_line)
+                            break
+                new_prog.groups.append(self._substitute_placeholders(Group(new_lines, group.nl_map), mapping))
             yield new_prog
 
     def _generate_splices(self, program, splice_param):
         """
         Generate splices (sub-programs) from the program according to the specified strategy.
-        Supports: 'multi_granularity', 'single', 'chunk', 'random', 'whole'
         """
-
-        """ HOW TO USE
-        Splicing Strategies for DataGenerator
-
-        You can control how ASP program variations are split into "splices" (sub-programs) using the `splice_params` argument.
-        This enables you to generate more data from each variation at different granularities.
-
-        splice_params can be a string (strategy name) or a dict with more options.
-
-        Supported strategies and parameters:
-
-        1. 'multi_granularity'
-            - For a program of n lines, generates splices for every chunk size from max_size down to min_size.
-            - For each chunk size k, you can choose how to select the chunks:
-                - window_type = 'sliding': All consecutive k-line windows (default).
-                - window_type = 'nonoverlap': Non-overlapping k-line chunks.
-                - window_type = 'random': Randomly sample k lines (random_samples times).
-            - Example:
-                splice_params = {
-                    'strategy': 'multi_granularity',
-                    'min_size': 1,
-                    'max_size': None,  # None means use program size
-                    'window_type': 'sliding',  # or 'random', 'nonoverlap'
-                    'random_samples': 5        # Only used if window_type is 'random'
-                }
-
-        2. 'single'
-            - Each line (fact, rule, constraint, etc.) is its own splice.
-            - Example: splice_params = 'single'
-
-        3. 'chunk'
-            - Program is split into consecutive chunks of a fixed size.
-            - Parameters:
-                - chunk_size: number of lines per chunk (default 2)
-            - Example:
-                splice_params = {
-                    'strategy': 'chunk',
-                    'chunk_size': 3
-                }
-
-        4. 'random'
-            - Randomly sample k lines per splice, repeated random_samples times.
-            - Parameters:
-                - random_k: number of lines per splice (default 2)
-                - random_samples: number of samples to generate (default 3)
-            - Example:
-                splice_params = {
-                    'strategy': 'random',
-                    'random_k': 3,
-                    'random_samples': 10
-                }
-
-        5. 'whole'
-            - The entire program is a single splice.
-            - Example: splice_params = 'whole'
-
-        Usage:
-            - Pass the desired strategy and parameters to DataGenerator:
-                dg = DataGenerator(program, splice_params=splice_params)
-            - For multi_granularity, you get the most data diversity.
-
-        Notes:
-            - If you pass a string (e.g., 'single'), defaults are used for other parameters.
-            - For 'multi_granularity', max_size defaults to program size, min_size to 1.
-            - For 'random' and 'multi_granularity' with window_type='random', results are non-deterministic unless you set a random seed.
-
-        """
-
         lines = program.get_lines()
         n = len(lines)
         if n == 0:
@@ -258,29 +234,51 @@ class DataGenerator:
         else:
             raise ValueError(f"Unknown splicing strategy: {strategy}")
 
-    def _render_CNL_NL_combinations(self, program, cnl_mods, nl_mods):
+    def _render_cnl_combinations(self, program, cnl_mods):
         """
-        For each line, get all CNLs for cnl_mods and all NLs for nl_mods.
-        Return all possible combinations (cartesian product) of CNL and NL for the splice.
+        For each line, get all CNLs for cnl_mods.
+        Return all possible combinations (cartesian product) of CNL for the splice.
         """
-        import itertools
         all_cnl_lists = []
-        all_nl_lists = []
         for line in program.get_lines():
             cnls = [line.cnl_map[m] for m in cnl_mods if m in line.cnl_map] or [line.asp_code]
-            nls = [line.nl_map[m] for m in nl_mods if m in line.nl_map] or [line.asp_code]
             all_cnl_lists.append(cnls)
-            all_nl_lists.append(nls)
         for cnl_tuple in itertools.product(*all_cnl_lists):
-            for nl_tuple in itertools.product(*all_nl_lists):
-                yield "\n".join(cnl_tuple), "\n".join(nl_tuple)
+            yield "\n".join(cnl_tuple)
+
+    def _render_nl_combinations_with_groups(self, program, nl_mods, splice_lines):
+        """
+        Render NL for a splice, using group NLs if all group lines are present.
+        Returns all possible combinations (cartesian product) of NLs for the splice.
+        """
+        # Track which lines are covered by a group
+        used_lines = set()
+        nl_lists = []
+
+        # Handle groups first
+        for group in program.get_groups():
+            if all(line in splice_lines for line in group.lines):
+                # Use group NL for these lines
+                nls = [group.nl_map[m] for m in nl_mods if m in group.nl_map] or [group.lines[0].asp_code]
+                nl_lists.append(nls)
+                used_lines.update(group.lines)
+
+        # Handle remaining lines not covered by a group
+        for line in splice_lines:
+            if line not in used_lines:
+                nls = [line.nl_map[m] for m in nl_mods if m in line.nl_map] or [line.asp_code]
+                nl_lists.append(nls)
+
+        # Cartesian product of all NL lists
+        for nl_tuple in itertools.product(*nl_lists):
+            yield "\n".join(nl_tuple)
 
     def generate_data(self, cnl_levels, nl_levels, pairings=None):
         """
         Generate all combinations of CNL and NL according to the specified levels and pairings.
+        Uses group NLs when a group is fully present in a splice.
         """
         if pairings is None:
-            # Default: full cross-product of all cnl_levels and nl_levels
             pairings = [(c, n) for c in cnl_levels for n in nl_levels]
 
         for cnl_level, nl_level in pairings:
@@ -290,10 +288,12 @@ class DataGenerator:
             for p in self.modeled_programs:
                 for variation in self._generate_variations(p, p.get_variations()):
                     for splice in self._generate_splices(variation, self.splice_params):
-                        for cnl, nl in self._render_CNL_NL_combinations(splice, cnl_mods, nl_mods):
-                            print(splice)
-                            print(cnl)
-                            print(nl)
-                            print()
+                        # CNL: line-based as before
+                        for cnl in self._render_cnl_combinations(splice, cnl_mods):
+                            # NL: group-aware
+                            for nl in self._render_nl_combinations_with_groups(variation, nl_mods, splice.get_lines()):
+                                print(splice)
+                                print(cnl)
+                                print(nl)
+                                print()
 
-    
