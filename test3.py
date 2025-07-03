@@ -1,7 +1,9 @@
-from AspPy2 import ASPProgram
+from AspPy2 import ASPProgram, DataGenerator
 
 p = ASPProgram()
-p.add_line('color("red").')
-p.add_line('node(1).')
-print(p)
+
+p.add_line('person(Alice).')
+
+dg = DataGenerator(p)
+dg.generate_data()
 
