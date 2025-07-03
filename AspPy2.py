@@ -2,6 +2,7 @@
 
 import copy
 import itertools
+import random
 
 class Line:
     """
@@ -31,7 +32,7 @@ class Line:
             else:
                 new_cnl_map[key] = val
         return Line(new_asp_code, new_cnl_map)
-
+       
 class ASPProgram:
     """
     Stores an ASP program as a list of Line objects.
@@ -71,15 +72,19 @@ class ASPProgram:
 
 class DataGenerator:
     """
-    Generates data from ASPProgram objects, supporting text-based variations.
+    Generates data from ASPProgram objects, supporting text-based variations and splicing.
     """
-    def __init__(self, program=None):
+    def __init__(self, program=None, splice_params='whole'):
         self.modeled_programs = []
+        self.splice_params = splice_params
         if program is not None:
             self.add_program(program)
 
     def add_program(self, program):
         self.modeled_programs.append(program)
+
+    def add_splice_params(self, splice_params):
+        self.splice_params = splice_params
 
     def _substitute_placeholders(self, line, mapping):
         """
@@ -102,11 +107,159 @@ class DataGenerator:
             new_prog.lines = [self._substitute_placeholders(line, mapping) for line in program.lines]
             yield new_prog
 
+    def _generate_splices(self, program, splice_param):
+        """
+        Generate splices (sub-programs) from the program according to the specified strategy.
+        Supports: 'multi_granularity', 'single', 'chunk', 'random', 'whole'
+        """
+
+        """ HOW TO USE
+        Splicing Strategies for DataGenerator
+
+        You can control how ASP program variations are split into "splices" (sub-programs) using the `splice_params` argument.
+        This enables you to generate more data from each variation at different granularities.
+
+        splice_params can be a string (strategy name) or a dict with more options.
+
+        Supported strategies and parameters:
+
+        1. 'multi_granularity'
+            - For a program of n lines, generates splices for every chunk size from max_size down to min_size.
+            - For each chunk size k, you can choose how to select the chunks:
+                - window_type = 'sliding': All consecutive k-line windows (default).
+                - window_type = 'nonoverlap': Non-overlapping k-line chunks.
+                - window_type = 'random': Randomly sample k lines (random_samples times).
+            - Example:
+                splice_params = {
+                    'strategy': 'multi_granularity',
+                    'min_size': 1,
+                    'max_size': None,  # None means use program size
+                    'window_type': 'sliding',  # or 'random', 'nonoverlap'
+                    'random_samples': 5        # Only used if window_type is 'random'
+                }
+
+        2. 'single'
+            - Each line (fact, rule, constraint, etc.) is its own splice.
+            - Example: splice_params = 'single'
+
+        3. 'chunk'
+            - Program is split into consecutive chunks of a fixed size.
+            - Parameters:
+                - chunk_size: number of lines per chunk (default 2)
+            - Example:
+                splice_params = {
+                    'strategy': 'chunk',
+                    'chunk_size': 3
+                }
+
+        4. 'random'
+            - Randomly sample k lines per splice, repeated random_samples times.
+            - Parameters:
+                - random_k: number of lines per splice (default 2)
+                - random_samples: number of samples to generate (default 3)
+            - Example:
+                splice_params = {
+                    'strategy': 'random',
+                    'random_k': 3,
+                    'random_samples': 10
+                }
+
+        5. 'whole'
+            - The entire program is a single splice.
+            - Example: splice_params = 'whole'
+
+        Usage:
+            - Pass the desired strategy and parameters to DataGenerator:
+                dg = DataGenerator(program, splice_params=splice_params)
+            - For multi_granularity, you get the most data diversity.
+
+        Notes:
+            - If you pass a string (e.g., 'single'), defaults are used for other parameters.
+            - For 'multi_granularity', max_size defaults to program size, min_size to 1.
+            - For 'random' and 'multi_granularity' with window_type='random', results are non-deterministic unless you set a random seed.
+
+        """
+
+        lines = program.get_lines()
+        n = len(lines)
+        if n == 0:
+            return
+
+        # Parse params
+        if isinstance(splice_param, str):
+            strategy = splice_param
+            min_size = 1
+            max_size = n
+            window_type = 'sliding'
+            random_samples = 3
+            randomised_order = False
+        else:
+            strategy = splice_param.get('strategy', 'multi_granularity')
+            min_size = splice_param.get('min_size', 1)
+            max_size = splice_param.get('max_size', n)
+            window_type = splice_param.get('window_type', 'sliding')
+            random_samples = splice_param.get('random_samples', 3)
+            randomised_order = splice_param.get('randomised_order', False)
+
+        def make_program_from_lines(lines_subset):
+            if randomised_order:
+                lines_shuffled = lines_subset[:]
+                random.shuffle(lines_shuffled)
+            else:
+                lines_shuffled = lines_subset
+            prog = copy.deepcopy(program)
+            prog.lines = lines_shuffled
+            return prog
+
+        # --- Generate and yield splices ---
+        if strategy == 'multi_granularity':
+            for k in range(max_size, min_size - 1, -1):
+                if k > n:
+                    continue
+                if window_type == 'sliding':
+                    for i in range(n - k + 1):
+                        yield make_program_from_lines(lines[i:i+k])
+                elif window_type == 'nonoverlap':
+                    for i in range(0, n, k):
+                        if i + k <= n:
+                            yield make_program_from_lines(lines[i:i+k])
+                elif window_type == 'random':
+                    for _ in range(random_samples):
+                        indices = sorted(random.sample(range(n), k))
+                        yield make_program_from_lines([lines[idx] for idx in indices])
+        elif strategy == 'single':
+            for line in lines:
+                yield make_program_from_lines([line])
+        elif strategy == 'chunk':
+            chunk_size = splice_param.get('chunk_size', 2)
+            for i in range(0, n, chunk_size):
+                yield make_program_from_lines(lines[i:i+chunk_size])
+        elif strategy == 'random':
+            k = splice_param.get('random_k', 2)
+            random_samples = splice_param.get('random_samples', 3)
+            randomised_order = splice_param.get('randomised_order', False)
+            if k > n:
+                return
+            for _ in range(random_samples):
+                indices = sorted(random.sample(range(n), k))
+                yield make_program_from_lines([lines[idx] for idx in indices])
+        elif strategy == 'whole':
+            yield make_program_from_lines(lines)
+        else:
+            raise ValueError(f"Unknown splicing strategy: {strategy}")
+
     def generate_data(self):
         """
-        Generate and print all variations of all modeled programs.
+        Generate and print all variations and splices of all modeled programs.
         """
+
+        count = 0
+
         for p in self.modeled_programs:
             for variation in self._generate_variations(p, p.get_variations()):
-                print(variation)
-                print()
+                for splice in self._generate_splices(variation, self.splice_params):
+                    print(splice)
+                    count += 1
+                    print()
+
+        print(f" === COUNT {count} ===")
