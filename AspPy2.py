@@ -6,18 +6,19 @@ import random
 
 class Line:
     """
-    Represents a single line of ASP code, with optional metadata (e.g., CNL/NL mapping).
+    Represents a single line of ASP code, with optional CNL and NL maps.
     """
-    def __init__(self, asp_code, cnl_map=None):
-        self.asp_code = asp_code  # The ASP rule/fact/constraint as a string
-        self.cnl_map = cnl_map or {}  # Optional: mapping for explanations/variations
+    def __init__(self, asp_code, cnl_map=None, nl_map=None):
+        self.asp_code = asp_code
+        self.cnl_map = cnl_map or {}
+        self.nl_map = nl_map or {}
 
     def __str__(self):
         return self.asp_code
 
     def substitute(self, mapping):
         """
-        Substitute ^VAR^ placeholders in asp_code and cnl_map using the mapping.
+        Substitute ^VAR^ placeholders in asp_code, cnl_map, and nl_map using the mapping.
         """
         new_asp_code = self.asp_code
         for k, v in mapping.items():
@@ -31,8 +32,17 @@ class Line:
                 new_cnl_map[key] = new_val
             else:
                 new_cnl_map[key] = val
-        return Line(new_asp_code, new_cnl_map)
-       
+        new_nl_map = {}
+        for key, val in self.nl_map.items():
+            if isinstance(val, str):
+                new_val = val
+                for k, v in mapping.items():
+                    new_val = new_val.replace(f'^{k}^', v)
+                new_nl_map[key] = new_val
+            else:
+                new_nl_map[key] = val
+        return Line(new_asp_code, new_cnl_map, new_nl_map)
+
 class ASPProgram:
     """
     Stores an ASP program as a list of Line objects.
@@ -41,12 +51,12 @@ class ASPProgram:
         self.lines = []  # List of Line objects
         self.variations = {}
 
-    def add_line(self, asp_code, cnl_map=None):
+    def add_line(self, asp_code, cnl_map=None, nl_map=None):
         """
         Add a line of ASP code (as a string) to the program.
-        Optionally, attach a CNL/NL mapping.
+        Optionally, attach a CNL and NL mapping.
         """
-        self.lines.append(Line(asp_code, cnl_map))
+        self.lines.append(Line(asp_code, cnl_map, nl_map))
 
     def add_variations(self, variations):
         """
@@ -248,43 +258,42 @@ class DataGenerator:
         else:
             raise ValueError(f"Unknown splicing strategy: {strategy}")
 
-    def _render_CNL_component(self, program, difficulty_modifiers):
+    def _render_CNL_NL_combinations(self, program, cnl_mods, nl_mods):
         """
-        Render the CNL version of the program (splice) according to the provided difficulty_modifiers.
-        For each line, if any modifier in difficulty_modifiers is present in cnl_map, use it.
+        For each line, get all CNLs for cnl_mods and all NLs for nl_mods.
+        Return all possible combinations (cartesian product) of CNL and NL for the splice.
         """
-        parts = []
+        import itertools
+        all_cnl_lists = []
+        all_nl_lists = []
         for line in program.get_lines():
-            found = False
-            for mod in difficulty_modifiers:
-                cnl = line.cnl_map.get(mod)
-                if cnl:
-                    parts.append(cnl)
-                    found = True
-                    break
-            if not found:
-                parts.append(line.asp_code)  # fallback: just show ASP code
-        return '\n'.join(parts)
+            cnls = [line.cnl_map[m] for m in cnl_mods if m in line.cnl_map] or [line.asp_code]
+            nls = [line.nl_map[m] for m in nl_mods if m in line.nl_map] or [line.asp_code]
+            all_cnl_lists.append(cnls)
+            all_nl_lists.append(nls)
+        for cnl_tuple in itertools.product(*all_cnl_lists):
+            for nl_tuple in itertools.product(*all_nl_lists):
+                yield "\n".join(cnl_tuple), "\n".join(nl_tuple)
 
-    def generate_data(self, difficulty_levels=None):
+    def generate_data(self, cnl_levels, nl_levels, pairings=None):
         """
-        Generate and print all variations and splices of all modeled programs, for each difficulty level.
-        difficulty_levels: dict, e.g. {'easy': ['easy'], 'medium': ['easy', 'medium']}
+        Generate all combinations of CNL and NL according to the specified levels and pairings.
         """
-        if difficulty_levels is None:
-            difficulty_levels = {'default': ['easy']}
+        if pairings is None:
+            # Default: full cross-product of all cnl_levels and nl_levels
+            pairings = [(c, n) for c in cnl_levels for n in nl_levels]
 
-        for diff_name, diff_mods in difficulty_levels.items():
+        for cnl_level, nl_level in pairings:
+            cnl_mods = cnl_levels[cnl_level]
+            nl_mods = nl_levels[nl_level]
+            print(f"=== CNL Level: {cnl_level} | NL Level: {nl_level} ===")
             for p in self.modeled_programs:
                 for variation in self._generate_variations(p, p.get_variations()):
                     for splice in self._generate_splices(variation, self.splice_params):
-                        print(splice)
-                        print(self._render_CNL_component(splice, diff_mods))
-                        print()
+                        for cnl, nl in self._render_CNL_NL_combinations(splice, cnl_mods, nl_mods):
+                            print(splice)
+                            print(cnl)
+                            print(nl)
+                            print()
 
-
-'''
-TODO later
-
-1) add defaults for when there are no CNL / NL passed in
-'''
+    
