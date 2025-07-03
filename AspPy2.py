@@ -248,18 +248,43 @@ class DataGenerator:
         else:
             raise ValueError(f"Unknown splicing strategy: {strategy}")
 
-    def generate_data(self):
+    def _render_CNL_component(self, program, difficulty_modifiers):
         """
-        Generate and print all variations and splices of all modeled programs.
+        Render the CNL version of the program (splice) according to the provided difficulty_modifiers.
+        For each line, if any modifier in difficulty_modifiers is present in cnl_map, use it.
         """
+        parts = []
+        for line in program.get_lines():
+            found = False
+            for mod in difficulty_modifiers:
+                cnl = line.cnl_map.get(mod)
+                if cnl:
+                    parts.append(cnl)
+                    found = True
+                    break
+            if not found:
+                parts.append(line.asp_code)  # fallback: just show ASP code
+        return '\n'.join(parts)
 
-        count = 0
+    def generate_data(self, difficulty_levels=None):
+        """
+        Generate and print all variations and splices of all modeled programs, for each difficulty level.
+        difficulty_levels: dict, e.g. {'easy': ['easy'], 'medium': ['easy', 'medium']}
+        """
+        if difficulty_levels is None:
+            difficulty_levels = {'default': ['easy']}
 
-        for p in self.modeled_programs:
-            for variation in self._generate_variations(p, p.get_variations()):
-                for splice in self._generate_splices(variation, self.splice_params):
-                    print(splice)
-                    count += 1
-                    print()
+        for diff_name, diff_mods in difficulty_levels.items():
+            for p in self.modeled_programs:
+                for variation in self._generate_variations(p, p.get_variations()):
+                    for splice in self._generate_splices(variation, self.splice_params):
+                        print(splice)
+                        print(self._render_CNL_component(splice, diff_mods))
+                        print()
 
-        print(f" === COUNT {count} ===")
+
+'''
+TODO later
+
+1) add defaults for when there are no CNL / NL passed in
+'''
