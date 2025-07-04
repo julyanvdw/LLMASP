@@ -271,18 +271,20 @@ class DataGenerator:
         # Handle groups first (largest groups first for priority)
         for group in sorted(program.get_groups(), key=lambda g: -len(g.lines)):
             present_lines = [line for line in group.lines if line in splice_lines]
-            if len(present_lines) >= 2:
-                # Use group NL for these lines
-                labels = [line.label or line.asp_code for line in present_lines]
-                group_members_str = natural_join(labels)
-                nls = []
+            arity = len(present_lines)
+            if arity >= 1:
                 for m in nl_mods:
-                    if m in group.nl_map:
-                        template = group.nl_map[m]
-                        nls.append(template.replace('^GROUP_MEMBERS^', group_members_str))
-                if nls:
-                    nl_lists.append(nls)
-                    used_lines.update(present_lines)
+                    key = f"{m}/{arity}"
+                    if key in group.nl_map:
+                        template = group.nl_map[key]
+                        # Fill {1}, {2}, ... with labels
+                        label_map = {f"{{{i+1}}}": (line.label or line.asp_code) for i, line in enumerate(present_lines)}
+                        nl = template
+                        for k, v in label_map.items():
+                            nl = nl.replace(k, v)
+                        nl_lists.append([nl])
+                        used_lines.update(present_lines)
+                        break  # Only use the first matching template
 
         # Handle remaining lines not covered by a group
         for line in splice_lines:
@@ -313,11 +315,8 @@ class DataGenerator:
                         for cnl in self._render_cnl_combinations(splice, cnl_mods):
                             # NL: group-aware, dynamic ^GROUP_MEMBERS^
                             for nl in self._render_nl_combinations_with_groups(variation, nl_mods, splice.get_lines()):
-                                print("ASP:")
                                 print(splice)
-                                print("CNL:")
                                 print(cnl)
-                                print("NL:")
                                 print(nl)
                                 print()
 

@@ -22,18 +22,21 @@ jane = p.add_line(
     label='Jane'
 )
 
-# Add a group with a dynamic NL template using ^GROUP_MEMBERS^
 p.add_group(
     [alice, bob, jane],
-    {'easy': '^GROUP_MEMBERS^ are people.'}
+    {
+        'easy/3': 'There are 3 people: {1}, {2} and {3}.',
+        'easy/2': '{1} and {2} are people.'
+    }
 )
+
 
 cnl_levels = {
     'easy': ['easy']
 }
 
 nl_levels = {
-    'easy': ['easy'],
+    'easy': ['easy']
 }
 
 splice_params = {
@@ -45,12 +48,3 @@ splice_params = {
 dg = DataGenerator(p, splice_params=splice_params)
 dg.generate_data(cnl_levels, nl_levels)
 
-
-'''
-Expected output:
-- For a chunk with Alice and Bob: "Alice and Bob are people."
-- For a chunk with Bob and Jane: "Bob and Jane are people."
-- For a chunk with Alice and Jane: "Alice and Jane are people."
-- For a chunk with all three: "Alice, Bob and Jane are people."
-- For a chunk with only one: falls back to line-level NL.
-'''
