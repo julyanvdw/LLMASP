@@ -128,10 +128,14 @@ class ASPProgram:
 class DataGenerator:
     """
     Generates data from ASPProgram objects, supporting text-based variations, splicing, and group NLs.
+    Stores all generated data and provides methods for unique NL:CNL and CNL:ASP pairs.
     """
     def __init__(self, program=None, splice_params='whole'):
         self.modeled_programs = []
         self.splice_params = splice_params
+        self.all_data = []      # List of dicts: {'asp': asp, 'cnl': cnl, 'nl': nl}
+        self.nl_cnl_set = set() # Set of (nl, cnl)
+        self.cnl_asp_set = set()# Set of (cnl, asp)
         if program is not None:
             self.add_program(program)
 
@@ -299,24 +303,60 @@ class DataGenerator:
     def generate_data(self, cnl_levels, nl_levels, pairings=None):
         """
         Generate all combinations of CNL and NL according to the specified levels and pairings.
-        Uses group NLs for any subset of group lines (>=2) in a splice.
+        Stores all data and unique NL:CNL and CNL:ASP pairs.
         """
+        self.all_data = []
+        self.nl_cnl_set = set()
+        self.cnl_asp_set = set()
+
         if pairings is None:
             pairings = [(c, n) for c in cnl_levels for n in nl_levels]
 
         for cnl_level, nl_level in pairings:
             cnl_mods = cnl_levels[cnl_level]
             nl_mods = nl_levels[nl_level]
-            print(f"=== CNL Level: {cnl_level} | NL Level: {nl_level} ===")
             for p in self.modeled_programs:
                 for variation in self._generate_variations(p, p.get_variations()):
                     for splice in self._generate_splices(variation, self.splice_params):
-                        # CNL: line-based as before
                         for cnl in self._render_cnl_combinations(splice, cnl_mods):
-                            # NL: group-aware, dynamic ^GROUP_MEMBERS^
                             for nl in self._render_nl_combinations_with_groups(variation, nl_mods, splice.get_lines()):
-                                print(splice)
-                                print(cnl)
-                                print(nl)
-                                print()
+                                asp_str = str(splice)
+                                entry = {'asp': asp_str, 'cnl': cnl, 'nl': nl}
+                                self.all_data.append(entry)
+                                self.nl_cnl_set.add((nl, cnl))
+                                self.cnl_asp_set.add((cnl, asp_str))
+
+    def get_all_data(self):
+        """
+        Print all generated (ASP, CNL, NL) triplets.
+        """
+        for entry in self.all_data:
+            print(entry['asp'])
+            print(entry['cnl'])
+            print(entry['nl'])
+            print()
+
+        print(f"COUNT: {len(self.all_data)}")
+
+    def get_nl_cnl_data(self):
+        """
+        Print all unique (NL, CNL) pairs.
+        """
+        for nl, cnl in self.nl_cnl_set:
+            print(cnl)
+            print(nl)
+            print()
+
+        print(f"COUNT: {len(self.nl_cnl_set)}")
+
+    def get_cnl_asp_data(self):
+        """
+        Print all unique (CNL, ASP) pairs.
+        """
+        for cnl, asp in self.cnl_asp_set:
+            print(asp)
+            print(cnl)
+            print()
+        
+        print(f"COUNT: {len(self.cnl_asp_set)}")
 
