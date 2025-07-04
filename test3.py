@@ -2,47 +2,31 @@ from AspPy2 import ASPProgram, DataGenerator
 
 p = ASPProgram()
 
-p.add_group([
-        p.add_line(
-            '^entity^(Alice).',
-            {
-                'easy': 'Alice is a ^entity^'
-            },
-            {
-                'easy': 'So we can defs say that Alice is a ^entity^'
-            }
-        ),
-
-        p.add_line(
-            '^entity^(Bob).',
-            {
-                'easy': 'Bob is a ^entity^'
-            },
-            {
-                'easy': 'So we can defs say that Bob is a ^entity^'
-            }
-        ),
-
-        p.add_line(
-            '^entity^(Jane).',
-            {
-                'easy': 'Jane is a ^entity^'
-            },
-            {
-                'easy': 'So we can defs say that Jane is a ^entity^'
-            }
-        )
-    ],
-    {
-        'easy' : 'Alice, Bob and Jane are people',
-    }
+# Add lines with labels for use in group NLs
+alice = p.add_line(
+    'person(Alice).',
+    {'easy': 'Alice is a person'},
+    {'easy': 'So we can defs say that Alice is a person'},
+    label='Alice'
+)
+bob = p.add_line(
+    'person(Bob).',
+    {'easy': 'Bob is a person'},
+    {'easy': 'So we can defs say that Bob is a person'},
+    label='Bob'
+)
+jane = p.add_line(
+    'person(Jane).',
+    {'easy': 'Jane is a person'},
+    {'easy': 'So we can defs say that Jane is a person'},
+    label='Jane'
 )
 
-p.add_variations({
-    'entity' : ['human', 'person'],
-})
-
-
+# Add a group with a dynamic NL template using ^GROUP_MEMBERS^
+p.add_group(
+    [alice, bob, jane],
+    {'easy': '^GROUP_MEMBERS^ are people.'}
+)
 
 cnl_levels = {
     'easy': ['easy']
@@ -52,15 +36,21 @@ nl_levels = {
     'easy': ['easy'],
 }
 
-
 splice_params = {
     'strategy': 'chunk',
-    'chunk_size': 3,
+    'chunk_size': 3,  # Try different chunk sizes to see group NLs for subsets
     'randomised_order': False
 }
-
 
 dg = DataGenerator(p, splice_params=splice_params)
 dg.generate_data(cnl_levels, nl_levels)
 
 
+'''
+Expected output:
+- For a chunk with Alice and Bob: "Alice and Bob are people."
+- For a chunk with Bob and Jane: "Bob and Jane are people."
+- For a chunk with Alice and Jane: "Alice and Jane are people."
+- For a chunk with all three: "Alice, Bob and Jane are people."
+- For a chunk with only one: falls back to line-level NL.
+'''

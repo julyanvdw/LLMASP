@@ -4,21 +4,30 @@ import copy
 import itertools
 import random
 
+def natural_join(names):
+    if len(names) == 1:
+        return names[0]
+    elif len(names) == 2:
+        return f"{names[0]} and {names[1]}"
+    else:
+        return ", ".join(names[:-1]) + f" and {names[-1]}"
+
 class Line:
     """
-    Represents a single line of ASP code, with optional CNL and NL maps.
+    Represents a single line of ASP code, with optional CNL and NL maps and a label.
     """
-    def __init__(self, asp_code, cnl_map=None, nl_map=None):
+    def __init__(self, asp_code, cnl_map=None, nl_map=None, label=None):
         self.asp_code = asp_code
         self.cnl_map = cnl_map or {}
         self.nl_map = nl_map or {}
+        self.label = label
 
     def __str__(self):
         return self.asp_code
 
     def substitute(self, mapping):
         """
-        Substitute ^VAR^ placeholders in asp_code, cnl_map, and nl_map using the mapping.
+        Substitute ^VAR^ placeholders in asp_code, cnl_map, nl_map, and label using the mapping.
         """
         new_asp_code = self.asp_code
         for k, v in mapping.items():
@@ -41,7 +50,11 @@ class Line:
                 new_nl_map[key] = new_val
             else:
                 new_nl_map[key] = val
-        return Line(new_asp_code, new_cnl_map, new_nl_map)
+        new_label = self.label
+        if new_label:
+            for k, v in mapping.items():
+                new_label = new_label.replace(f'^{k}^', v)
+        return Line(new_asp_code, new_cnl_map, new_nl_map, new_label)
 
 class Group:
     """
@@ -75,13 +88,13 @@ class ASPProgram:
         self.variations = {}
         self.groups = []  # List of Group objects
 
-    def add_line(self, asp_code, cnl_map=None, nl_map=None):
+    def add_line(self, asp_code, cnl_map=None, nl_map=None, label=None):
         """
         Add a line of ASP code (as a string) to the program.
-        Optionally, attach a CNL and NL mapping.
+        Optionally, attach a CNL and NL mapping and a label.
         Returns the Line object for group referencing.
         """
-        line = Line(asp_code, cnl_map, nl_map)
+        line = Line(asp_code, cnl_map, nl_map, label)
         self.lines.append(line)
         return line
 
@@ -248,20 +261,28 @@ class DataGenerator:
 
     def _render_nl_combinations_with_groups(self, program, nl_mods, splice_lines):
         """
-        Render NL for a splice, using group NLs if all group lines are present.
+        Render NL for a splice, using group NLs for any subset of group lines (>=2).
+        Fills ^GROUP_MEMBERS^ with the joined labels of present lines.
         Returns all possible combinations (cartesian product) of NLs for the splice.
         """
-        # Track which lines are covered by a group
         used_lines = set()
         nl_lists = []
 
-        # Handle groups first
-        for group in program.get_groups():
-            if all(line in splice_lines for line in group.lines):
+        # Handle groups first (largest groups first for priority)
+        for group in sorted(program.get_groups(), key=lambda g: -len(g.lines)):
+            present_lines = [line for line in group.lines if line in splice_lines]
+            if len(present_lines) >= 2:
                 # Use group NL for these lines
-                nls = [group.nl_map[m] for m in nl_mods if m in group.nl_map] or [group.lines[0].asp_code]
-                nl_lists.append(nls)
-                used_lines.update(group.lines)
+                labels = [line.label or line.asp_code for line in present_lines]
+                group_members_str = natural_join(labels)
+                nls = []
+                for m in nl_mods:
+                    if m in group.nl_map:
+                        template = group.nl_map[m]
+                        nls.append(template.replace('^GROUP_MEMBERS^', group_members_str))
+                if nls:
+                    nl_lists.append(nls)
+                    used_lines.update(present_lines)
 
         # Handle remaining lines not covered by a group
         for line in splice_lines:
@@ -276,7 +297,7 @@ class DataGenerator:
     def generate_data(self, cnl_levels, nl_levels, pairings=None):
         """
         Generate all combinations of CNL and NL according to the specified levels and pairings.
-        Uses group NLs when a group is fully present in a splice.
+        Uses group NLs for any subset of group lines (>=2) in a splice.
         """
         if pairings is None:
             pairings = [(c, n) for c in cnl_levels for n in nl_levels]
@@ -290,10 +311,13 @@ class DataGenerator:
                     for splice in self._generate_splices(variation, self.splice_params):
                         # CNL: line-based as before
                         for cnl in self._render_cnl_combinations(splice, cnl_mods):
-                            # NL: group-aware
+                            # NL: group-aware, dynamic ^GROUP_MEMBERS^
                             for nl in self._render_nl_combinations_with_groups(variation, nl_mods, splice.get_lines()):
+                                print("ASP:")
                                 print(splice)
+                                print("CNL:")
                                 print(cnl)
+                                print("NL:")
                                 print(nl)
                                 print()
 
