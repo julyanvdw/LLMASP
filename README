@@ -1,0 +1,28 @@
+# AspPy2
+
+**AspPy2** is a lightweight Python API for modeling Answer Set Programming (ASP) programs as composable lines of code, with support for controlled natural language (CNL) and natural language (NL) mappings, text-based variations, and flexible groupings for richer explanations. AspPy2 takes this, and generates data according to a range of variation, program splices and more.
+
+## What does it do?
+
+- **Model ASP programs** as lists of lines, each with optional CNL/NL mappings and labels.
+- **Define groups** of lines to generate group-level NL explanations, with support for arity-based templates (e.g., different NL for 2, 3, or more group members).
+- **Generate data** by splicing, varying, and combining lines and groups, producing all possible (ASP, CNL, NL) triplets.
+- **Deduplicate and extract** unique NL:CNL and CNL:ASP pairs for downstream tasks like data generation, training, or evaluation.
+
+## How does it work?
+
+- You build an `ASPProgram` by adding lines (with optional labels and mappings) and groups.
+- You can specify text variations for placeholders.
+- The `DataGenerator` class generates all possible combinations, applies variations, and supports different splicing strategies.
+- All generated data is stored and can be accessed or printed as:
+  - All triplets (ASP, CNL, NL)
+  - Unique NL:CNL pairs
+  - Unique CNL:ASP pairs
+
+## Requirements
+
+- Python 3.8+
+- (Recommended) Use a virtual environment:
+  ```bash
+  python3 -m venv venv
+  source venv/bin/activate
