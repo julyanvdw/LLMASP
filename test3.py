@@ -4,10 +4,10 @@ p = ASPProgram()
 
 # Add lines with labels for use in group NLs
 alice = p.add_line(
-    'person(Alice).',
-    {'easy': 'Alice is a person'},
-    {'easy': 'So we can defs say that Alice is a person'},
-    label='Alice'
+    'person(Alex).',
+    {'easy': 'Alex is a person'},
+    {'easy': 'So we can defs say that Alex is a person'},
+    label='Alex'
 )
 bob = p.add_line(
     'person(Bob).',
@@ -15,7 +15,7 @@ bob = p.add_line(
     {'easy': 'So we can defs say that Bob is a person'},
     label='Bob'
 )
-jane = p.add_line(
+jane = p.add_line( 
     'person(Jane).',
     {'easy': 'Jane is a person'},
     {'easy': 'So we can defs say that Jane is a person'},
