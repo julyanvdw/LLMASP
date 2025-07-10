@@ -1,0 +1,22 @@
+[
+  {
+    "instruction": "Simplify this problem",
+    "input": "So we can defs say that Alex is a person",
+    "output": "Alex is a person"
+  },
+  {
+    "instruction": "Simplify this problem",
+    "input": "So we can defs say that Bob is a person",
+    "output": "Bob is a person"
+  },
+  {
+    "instruction": "Simplify this problem",
+    "input": "So we can defs say that Jane is a person",
+    "output": "Jane is a person"
+  },
+  {
+    "instruction": "Simplify this problem",
+    "input": "nodes 1 and 2 are connected",
+    "output": "node 1 is connected to node 2"
+  }
+]

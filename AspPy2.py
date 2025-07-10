@@ -3,6 +3,7 @@
 import copy
 import itertools
 import random
+import json
 
 def natural_join(names):
     if len(names) == 1:
@@ -359,4 +360,36 @@ class DataGenerator:
             print()
         
         print(f"COUNT: {len(self.cnl_asp_set)}")
+
+    def export_nl_cnl_instruction_json(self, filename, instruction):
+        """
+        Export unique NL:CNL pairs as a JSON file for instruction tuning (NL input, CNL output).
+        Each entry is: {"instruction": <instruction>, "input": <NL>, "output": <CNL>}
+        """
+        data = []
+        for nl, cnl in self.nl_cnl_set:
+            data.append({
+                "instruction": instruction,
+                "input": nl,
+                "output": cnl
+            })
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        print(f"Wrote {len(data)} NL:CNL instruction pairs to {filename}")
+
+    def export_cnl_asp_instruction_json(self, filename, instruction):
+        """
+        Export unique CNL:ASP pairs as a JSON file for instruction tuning (CNL input, ASP output).
+        Each entry is: {"instruction": <instruction>, "input": <CNL>, "output": <ASP>}
+        """
+        data = []
+        for cnl, asp in self.cnl_asp_set:
+            data.append({
+                "instruction": instruction,
+                "input": cnl,
+                "output": asp
+            })
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        print(f"Wrote {len(data)} CNL:ASP instruction pairs to {filename}")
 
