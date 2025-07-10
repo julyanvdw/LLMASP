@@ -1,0 +1,4 @@
+{"instruction": "Translate this to ASP code", "input": "Jane is a person", "output": "person(Jane)."}
+{"instruction": "Translate this to ASP code", "input": "node 1 is connected to node 2", "output": "connected_to(1,X) :- node(1), node(X), X = 2."}
+{"instruction": "Translate this to ASP code", "input": "Bob is a person", "output": "person(Bob)."}
+{"instruction": "Translate this to ASP code", "input": "Alex is a person", "output": "person(Alex)."}

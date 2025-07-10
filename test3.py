@@ -45,11 +45,10 @@ nl_levels = {
     'easy': ['easy'],
 }
 
-
 dg = DataGenerator(p, splice_params='single')
 dg.generate_data(cnl_levels, nl_levels)
 # dg.get_all_data()
 # dg.get_nl_cnl_data()
 # dg.get_cnl_asp_data()
-# dg.export_cnl_asp_instruction_json("test.json", 'Translate this to ASP code')
-dg.export_nl_cnl_instruction_json("test.json", 'Simplify this problem')
+dg.export_cnl_asp_instruction_jsonl("test.jsonl", 'Translate this to ASP code')
+# dg.export_nl_cnl_instruction_jsonl("test.jsonl", 'Translate this to simpler statements')

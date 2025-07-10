@@ -1,22 +1,7 @@
 [
   {
-    "instruction": "Simplify this problem",
-    "input": "So we can defs say that Alex is a person",
-    "output": "Alex is a person"
-  },
-  {
-    "instruction": "Simplify this problem",
-    "input": "So we can defs say that Bob is a person",
-    "output": "Bob is a person"
-  },
-  {
-    "instruction": "Simplify this problem",
-    "input": "So we can defs say that Jane is a person",
-    "output": "Jane is a person"
-  },
-  {
-    "instruction": "Simplify this problem",
-    "input": "nodes 1 and 2 are connected",
-    "output": "node 1 is connected to node 2"
+    "instruction": "Translate this to ASP code",
+    "input": "Alex is a person\nBob is a person\nJane is a person\nnode 1 is connected to node 2",
+    "output": "person(Alex).\nperson(Bob).\nperson(Jane).\nconnected_to(1,X) :- node(1), node(X), X = 2."
   }
 ]
