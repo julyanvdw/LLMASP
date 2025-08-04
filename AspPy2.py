@@ -361,33 +361,53 @@ class DataGenerator:
         
         print(f"COUNT: {len(self.cnl_asp_set)}")
 
-    def export_nl_cnl_instruction_jsonl(self, filename, instruction):
+    def export_nl_cnl_instruction_jsonl(self, filename, instruction, max_samples=None):
         """
         Export unique NL:CNL pairs as a JSONL file for instruction tuning (NL input, CNL output).
         Each line is: {"instruction": <instruction>, "input": <NL>, "output": <CNL>}
+        
+        Args:
+            filename: Output filename
+            instruction: Instruction text for the model
+            n: Maximum number of entries to export (randomly sampled). If None, exports all.
         """
+        data_list = list(self.nl_cnl_set)
+        
+        if max_samples is not None and max_samples < len(data_list):
+            data_list = random.sample(data_list, max_samples)
+        
         with open(filename, "w", encoding="utf-8") as f:
-            for nl, cnl in self.nl_cnl_set:
+            for nl, cnl in data_list:
                 obj = {
                     "instruction": instruction,
                     "input": nl,
                     "output": cnl
                 }
                 f.write(json.dumps(obj, ensure_ascii=False) + "\n")
-        print(f"Wrote {len(self.nl_cnl_set)} NL:CNL instruction pairs to {filename}")
+        print(f"Wrote {len(data_list)} NL:CNL instruction pairs to {filename}")
 
-    def export_cnl_asp_instruction_jsonl(self, filename, instruction):
+    def export_cnl_asp_instruction_jsonl(self, filename, instruction, max_samples=None):
         """
         Export unique CNL:ASP pairs as a JSONL file for instruction tuning (CNL input, ASP output).
         Each line is: {"instruction": <instruction>, "input": <CNL>, "output": <ASP>}
+        
+        Args:
+            filename: Output filename
+            instruction: Instruction text for the model
+            n: Maximum number of entries to export (randomly sampled). If None, exports all.
         """
+        data_list = list(self.cnl_asp_set)
+        
+        if max_samples is not None and max_samples < len(data_list):
+            data_list = random.sample(data_list, max_samples)
+        
         with open(filename, "w", encoding="utf-8") as f:
-            for cnl, asp in self.cnl_asp_set:
+            for cnl, asp in data_list:
                 obj = {
                     "instruction": instruction,
                     "input": cnl,
                     "output": asp
                 }
                 f.write(json.dumps(obj, ensure_ascii=False) + "\n")
-        print(f"Wrote {len(self.cnl_asp_set)} CNL:ASP instruction pairs to {filename}")
+        print(f"Wrote {len(data_list)} CNL:ASP instruction pairs to {filename}")
 
