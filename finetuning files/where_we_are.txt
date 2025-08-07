@@ -1,0 +1,19 @@
+1) Finetuning script working with proper hyperparams
+- can load prev checkpoints
+- works with early stopping
+- uses Evaluator for checking while training
+
+2) Evaluator
+- prints out the erros and keeps track of how the model is doing / did
+
+3) Download phi2
+
+4) interactive_evaluator
+- runs post Evaluatino with Evaluator
+
+5) interactive_inference
+- loads a checkpoint so that we can play with it
+
+6) data_mixer
+- allows us to mix datasets to create new datasets according to various proportions
+
