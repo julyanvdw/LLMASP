@@ -19,13 +19,15 @@ theme_sets = [
         'G': 'G',
         'M': 'M',
         'variations': {
-            'V1': ['Ryzen5', 'Ryzen4'],
+            'V1': ['Ryzen5'],
             'V2': ['i5'],
             'V3': ['GTX1660'],
             'V4': ['RX580'],
             'V5': ['B450'],
             'V6': ['Z390']
-        }
+        },
+        'theme': 'PC',
+        'verb': 'build',
     }
 ]
 
@@ -40,13 +42,20 @@ def generate_programs(theme_sets):
             '{P1}("^V1^"; "^V2^").'.format(**theme),
             {'simple': '^V1^ and ^V2^ are {P1}s.'.format(**theme)},
             {'simple': 'There are two {P1}s: ^V1^ and ^V2^.'.format(**theme)},
-            label='cpu'
+            label='{P1}'.format(**theme)
         )
         cpu_choice = p.add_line(
             '1 {{ {P2}({C}) : {P1}({C}) }} 1.'.format(**theme),
             {'simple': 'Select exactly one {P1} from ^V1^, ^V2^.'.format(**theme)},
             {'simple': 'You must choose one {P1}: ^V1^ or ^V2^.'.format(**theme)},
-            label='cpu_choice'
+            label='{P2}'.format(**theme)
+        )
+
+        p.add_group(
+            [cpu_fact, cpu_choice],
+            {
+                'simple/2': 'You can only select one {1} from the available {1}s: ^V1^ and ^V2^'
+            }
         )
 
         # GPU
@@ -54,13 +63,20 @@ def generate_programs(theme_sets):
             '{P3}("^V3^"; "^V4^").'.format(**theme),
             {'simple': '^V3^ and ^V4^ are {P3}s.'.format(**theme)},
             {'simple': 'There are two {P3}s: ^V3^ and ^V4^.'.format(**theme)},
-            label='gpu'
+            label='{P3}'.format(**theme)
         )
         gpu_choice = p.add_line(
             '1 {{ {P4}({G}) : {P3}({G}) }} 1.'.format(**theme),
             {'simple': 'Select exactly one {P3} from ^V3^, ^V4^.'.format(**theme)},
             {'simple': 'You must choose one {P3}: ^V3^ or ^V4^.'.format(**theme)},
-            label='gpu_choice'
+            label='{P4}'.format(**theme)
+        )
+
+        p.add_group(
+            [gpu_fact, gpu_choice],
+            {
+                'simple/2': 'You can only select one {1} from the available {1}s: ^V3^ and ^V4^'
+            }
         )
 
         # Motherboard
@@ -68,19 +84,28 @@ def generate_programs(theme_sets):
             '{P5}("^V5^"; "^V6^").'.format(**theme),
             {'simple': '^V5^ and ^V6^ are {P5}s.'.format(**theme)},
             {'simple': 'There are two {P5}s: ^V5^ and ^V6^.'.format(**theme)},
-            label='mobo'
+            label='{P5}'.format(**theme)
         )
         mobo_choice = p.add_line(
             '1 {{ {P6}({M}) : {P5}({M}) }} 1.'.format(**theme),
             {'simple': 'Select exactly one {P5} from ^V5^, ^V6^.'.format(**theme)},
             {'simple': 'You must choose one {P5}: ^V5^ or ^V6^.'.format(**theme)},
-            label='mobo_choice'
+            label='{P6}'.format(**theme)
         )
 
-        # Selection group
+        p.add_group(
+            [mobo_fact, mobo_choice],
+            {
+                'simple/2': 'You can only select one {1} from the available {1}s: ^V5^ and ^V6^'
+            }
+        )
+
+       
+        # ALL selection group
+
         p.add_group(
             [cpu_fact, cpu_choice, gpu_fact, gpu_choice, mobo_fact, mobo_choice],
-            {'simple/6': 'You must select exactly one {P1}, one {P3}, and one {P5} for your build.'.format(**theme)}
+            {'simple/6': "You're {verb}ing a {theme}. You must select exactly one CPU, GPU, and motherboard for your build.".format(**theme)}
         )
 
         # Compatibility constraints
@@ -109,13 +134,6 @@ def generate_programs(theme_sets):
             label='req3'
         )
 
-        # Constraints group
-        p.add_group(
-            [req1, req2, req3],
-            {'simple/3': 'Compatibility rules: {1}, {2}, and {3}.'}
-        )
-
-        # Register value variations
         p.add_variations(theme['variations'])
         generated_programs.append(p)
 
