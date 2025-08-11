@@ -1,4 +1,6 @@
 from AspPy2 import ASPProgram, DataGenerator
+import random
+import json
 
 # Define the theme set for the computer build problem
 theme_sets = [
@@ -8,7 +10,7 @@ theme_sets = [
         'P2': 'selected_cpu',
         'P3': 'gpu',
         'P4': 'selected_gpu',
-        'P5': 'mobotherboard',
+        'P5': 'motherboard',
         'P6': 'selected_mobo',
         'V1': 'Ryzen5',
         'V2': 'i5',
@@ -23,12 +25,180 @@ theme_sets = [
             'V1': ['Ryzen5', 'Ryzen7'],
             'V2': ['i5', 'Pentium'],
             'V3': ['GTX1660', 'RTX2060'],
-            'V4': ['RX580', 'R7 240'],
+            'V4': ['RX580', 'R7240'],
             'V5': ['B450', 'X570'],
             'V6': ['Z390', 'Z490']
         },
         'theme': 'PC',
         'verb': 'build',
+    },
+    # THEME 2 - audio system
+    {
+        'P1': 'speaker',
+        'P2': 'selected_speaker',
+        'P3': 'amplifier',
+        'P4': 'selected_amplifier',
+        'P5': 'player',
+        'P6': 'selected_player',
+        'V1': 'Alpha',
+        'V2': 'Beta',
+        'V3': 'AmpX',
+        'V4': 'AmpY',
+        'V5': 'Streamer1',
+        'V6': 'Streamer2',
+        'C': 'S',
+        'G': 'A',
+        'M': 'P',
+        'variations': {
+            'V1': ['Alpha', 'Beta'],
+            'V2': ['Phi', 'Gamma'],
+            'V3': ['AmpX', 'AmpY'],
+            'V4': ['AmpZ', 'AmpW'],
+            'V5': ['Streamer1', 'Streamer2'],
+            'V6': ['Streamer3', 'Streamer4']
+        },
+        'theme': 'Audio System',
+        'verb': 'assemble',
+    },
+    # THEME 3 - mobile plan
+    {
+        'P1': 'plan',
+        'P2': 'selected_plan',
+        'P3': 'phone',
+        'P4': 'selected_phone',
+        'P5': 'accessory',
+        'P6': 'selected_accessory',
+        'V1': 'BasicData',
+        'V2': 'PremiumData',
+        'V3': 'ModelX',
+        'V4': 'ModelY',
+        'V5': 'CaseA',
+        'V6': 'CaseB',
+        'C': 'P',
+        'G': 'M',
+        'M': 'A',
+        'variations': {
+            'V1': ['BasicData', 'PremiumData'],
+            'V2': ['Yodata', 'GoodData'],
+            'V3': ['ModelX', 'ModelY'],
+            'V4': ['ModelZ', 'ModelW'],
+            'V5': ['CaseA', 'CaseB'],
+            'V6': ['CaseC', 'CaseD']
+        },
+        'theme': 'Mobile Plan',
+        'verb': 'choose',
+    },
+    # THEME 4 - travel package
+    {
+        'P1': 'flight',
+        'P2': 'selected_flight',
+        'P3': 'hotel',
+        'P4': 'selected_hotel',
+        'P5': 'tour',
+        'P6': 'selected_tour',
+        'V1': 'FlightA',
+        'V2': 'FlightB',
+        'V3': 'HotelX',
+        'V4': 'HotelY',
+        'V5': 'Tour1',
+        'V6': 'Tour2',
+        'C': 'F',
+        'G': 'H',
+        'M': 'T',
+        'variations': {
+            'V1': ['FlightA', 'FlightB'],
+            'V2': ['FlightC', 'FlightD'],
+            'V3': ['HotelX', 'HotelY'],
+            'V4': ['HotelZ', 'HotelW'],
+            'V5': ['Tour1', 'Tour2'],
+            'V6': ['Tour3', 'Tour4']
+        },
+        'theme': 'Travel Package',
+        'verb': 'plan',
+    },
+    # THEME 5 - pizza order
+    {
+        'P1': 'base',
+        'P2': 'selected_base',
+        'P3': 'sauce',
+        'P4': 'selected_sauce',
+        'P5': 'topping',
+        'P6': 'selected_topping',
+        'V1': 'ThinCrust',
+        'V2': 'DeepDish',
+        'V3': 'Tomato',
+        'V4': 'Pesto',
+        'V5': 'Pepperoni',
+        'V6': 'Mushroom',
+        'C': 'B',
+        'G': 'S',
+        'M': 'T',
+        'variations': {
+            'V1': ['ThinCrust', 'DeepDish'],
+            'V2': ['StuffedCrust', 'Flatbread'],
+            'V3': ['Tomato', 'Pesto'],
+            'V4': ['Alfredo', 'BBQ'],
+            'V5': ['Pepperoni', 'Mushroom'],
+            'V6': ['Onion', 'Olive']
+        },
+        'theme': 'Pizza Order',
+        'verb': 'order',
+    },  
+    # THEME 6 - car rental
+    {
+        'P1': 'car',
+        'P2': 'selected_car',
+        'P3': 'insurance',
+        'P4': 'selected_insurance',
+        'P5': 'gps',
+        'P6': 'selected_gps',
+        'V1': 'Sedan',
+        'V2': 'SUV',
+        'V3': 'BasicCover',
+        'V4': 'FullCover',
+        'V5': 'GPS1',
+        'V6': 'GPS2',
+        'C': 'C',
+        'G': 'I',
+        'M': 'G',
+        'variations': {
+            'V1': ['Sedan', 'SUV'],
+            'V2': ['Convertible', 'Truck'],
+            'V3': ['BasicCover', 'FullCover'],
+            'V4': ['PremiumCover', 'StandardCover'],
+            'V5': ['GPS1', 'GPS2'],
+            'V6': ['GPS3', 'GPS4']
+        },
+        'theme': 'Car Rental',
+        'verb': 'rent',
+    },
+    # THEME 7 - online course bundle
+    {
+        'P1': 'course',
+        'P2': 'selected_course',
+        'P3': 'textbook',
+        'P4': 'selected_textbook',
+        'P5': 'project',
+        'P6': 'selected_project',
+        'V1': 'Math101',
+        'V2': 'CS102',
+        'V3': 'TextA',
+        'V4': 'TextB',
+        'V5': 'ProjX',
+        'V6': 'ProjY',
+        'C': 'C',
+        'G': 'T',
+        'M': 'P',
+        'variations': {
+            'V1': ['Math101', 'CS102'],
+            'V2': ['Bio103', 'Chem104'],
+            'V3': ['TextA', 'TextB'],
+            'V4': ['TextC', 'TextD'],
+            'V5': ['ProjX', 'ProjY'],
+            'V6': ['ProjZ', 'ProjW']
+        },
+        'theme': 'Course Bundle',
+        'verb': 'enroll',
     }
 ]
 
@@ -56,7 +226,7 @@ def generate_programs(theme_sets):
                 'nl7': 'Choose between ^V1^ and ^V2^ for the {P1} slot.'.format(**theme),
                 'nl8': 'Your {P1} must be one of the following: ^V1^, ^V2^.'.format(**theme),
                 'nl9': 'For this {theme}, you may use ^V1^ or ^V2^ as the {P1}.'.format(**theme),
-                'nl10': 'The available {P1}s for this build are ^V1^ and ^V2^.'.format(**theme)
+                'nl10': 'The available {P1}s for this {verb} are ^V1^ and ^V2^.'.format(**theme)
             },
             label='{P1}'.format(**theme)
         )
@@ -116,7 +286,7 @@ def generate_programs(theme_sets):
                 'nl7': 'Choose between ^V3^ and ^V4^ for the {P3} slot.'.format(**theme),
                 'nl8': 'Your {P3} must be one of the following: ^V3^, ^V4^.'.format(**theme),
                 'nl9': 'For this {theme}, you may use ^V3^ or ^V4^ as the {P3}.'.format(**theme),
-                'nl10': 'The available {P3}s for this build are ^V3^ and ^V4^.'.format(**theme)
+                'nl10': 'The available {P3}s for this {verb} are ^V3^ and ^V4^.'.format(**theme)
             },
             label='{P3}'.format(**theme)
         )
@@ -176,7 +346,7 @@ def generate_programs(theme_sets):
                 'nl7': 'Choose between ^V5^ and ^V6^ for the {P5} slot.'.format(**theme),
                 'nl8': 'Your {P5} must be one of the following: ^V5^, ^V6^.'.format(**theme),
                 'nl9': 'For this {theme}, you may use ^V5^ or ^V6^ as the {P5}.'.format(**theme),
-                'nl10': 'The available {P5}s for this build are ^V5^ and ^V6^.'.format(**theme)
+                'nl10': 'The available {P5}s for this {verb} are ^V5^ and ^V6^.'.format(**theme)
             },
             label='{P5}'.format(**theme)
         )
@@ -222,16 +392,16 @@ def generate_programs(theme_sets):
         p.add_group(
             [cpu_fact, cpu_choice, gpu_fact, gpu_choice, mobo_fact, mobo_choice],
             {
-                'nl1/6': "You are assembling a basic custom {theme} using three components: a {P1}, a {P3}, and a {P5}. Each final build must include exactly one {P1}, one {P3}, and one {P5}.".format(**theme),
+                'nl1/6': "You are assembling a basic custom {theme} using three components: a {P1}, a {P3}, and a {P5}. Each final {verb} must include exactly one {P1}, one {P3}, and one {P5}.".format(**theme),
                 'nl2/6': "To {verb} your {theme}, select one {P1}, one {P3}, and one {P5} from the available options.".format(**theme),
                 'nl3/6': "For this configuration, you must pick exactly one {P1}, {P3}, and {P5} for your system.".format(**theme),
                 'nl4/6': "Build your {theme} by choosing a {P1}, a {P3}, and a {P5}.".format(**theme),
                 'nl5/6': "Your {theme} requires one {P1}, one {P3}, and one {P5}.".format(**theme),
                 'nl6/6': "Select a {P1}, {P3}, and {P5} to complete your {theme}.".format(**theme),
                 'nl7/6': "Exactly one {P1}, {P3}, and {P5} must be chosen for this {theme}.".format(**theme),
-                'nl8/6': "Pick your preferred {P1}, {P3}, and {P5} for the build.".format(**theme),
+                'nl8/6': "Pick your preferred {P1}, {P3}, and {P5} for the {verb}.".format(**theme),
                 'nl9/6': "Choose one of each: {P1}, {P3}, and {P5}.".format(**theme),
-                'nl10/6': "Your build is only valid with one {P1}, one {P3}, and one {P5}.".format(**theme)
+                'nl10/6': "Your {verb} is only valid with one {P1}, one {P3}, and one {P5}.".format(**theme)
             }
         )
 
@@ -296,7 +466,7 @@ def generate_programs(theme_sets):
                 'nl6': 'The ^V4^ {P3} does not work with the ^V6^ {P5}.'.format(**theme),
                 'nl7': 'If you want ^V4^, you cannot use ^V6^ as your {P5}.'.format(**theme),
                 'nl8': 'The ^V4^ {P3} is not compatible with any {theme} using ^V6^.'.format(**theme),
-                'nl9': 'Only builds without ^V6^ can use ^V4^ as the {P3}.'.format(**theme),
+                'nl9': 'Only {verb}s without ^V6^ can use ^V4^ as the {P3}.'.format(**theme),
                 'nl10': 'Selecting ^V4^ forces you to avoid ^V6^ as your {P5}.'.format(**theme)
             },
             label='req3'
@@ -349,8 +519,102 @@ nl_levels = {
 # Generate the programs from the theme sets
 programs = generate_programs(theme_sets)
 
-# Generate and print all data for each program
-for p in programs:
-    dg = DataGenerator(p, splice_params='whole')
+# Splice params: single lines up to full programs, 2 random samples per size
+splice_params = {
+    'strategy': 'multi_granularity',
+    'min_size': 1,
+    'max_size': 9,  # None = up to full program
+    'window_type': 'random',
+    'random_samples': 2,
+    'randomised_order': True
+}
+
+target_total = 20000
+target_per_program = target_total // len(programs)
+
+all_cnl_asp_pairs = set()
+all_nl_cnl_pairs = set()
+cnl_asp_stats = []
+nl_cnl_stats = []
+
+for idx, p in enumerate(programs):
+    print(f"\nProcessing THEME {idx+1} ({theme_sets[idx]['theme']}):")
+    variations = p.get_variations()
+    total_variations = 1
+    for key, values in variations.items():
+        total_variations *= len(values)
+    print(f"  Lines: {len(p.lines)}")
+    print(f"  Variation categories: {len(variations)}")
+    print(f"  Total combinations: {total_variations:,}")
+
+    dg = DataGenerator(p, splice_params)
     dg.generate_data(cnl_levels=cnl_levels, nl_levels=nl_levels)
-    dg.get_all_data()
+
+    # --- CNL:ASP ---
+    prog_cnl_asp = len(dg.cnl_asp_set)
+    print(f"  Generated unique CNL:ASP pairs: {prog_cnl_asp:,}")
+    if prog_cnl_asp > target_per_program:
+        sampled_cnl_asp = random.sample(list(dg.cnl_asp_set), target_per_program)
+        all_cnl_asp_pairs.update(sampled_cnl_asp)
+        actual_cnl_asp = target_per_program
+    else:
+        all_cnl_asp_pairs.update(dg.cnl_asp_set)
+        actual_cnl_asp = prog_cnl_asp
+    cnl_asp_stats.append((theme_sets[idx]['theme'], actual_cnl_asp))
+
+    # --- NL:CNL ---
+    prog_nl_cnl = len(dg.nl_cnl_set)
+    print(f"  Generated unique NL:CNL pairs: {prog_nl_cnl:,}")
+    if prog_nl_cnl > target_per_program:
+        sampled_nl_cnl = random.sample(list(dg.nl_cnl_set), target_per_program)
+        all_nl_cnl_pairs.update(sampled_nl_cnl)
+        actual_nl_cnl = target_per_program
+    else:
+        all_nl_cnl_pairs.update(dg.nl_cnl_set)
+        actual_nl_cnl = prog_nl_cnl
+    nl_cnl_stats.append((theme_sets[idx]['theme'], actual_nl_cnl))
+
+# --- OUTPUT STATS ---
+print(f"\n{'='*70}\nFINAL SUMMARY\n{'='*70}")
+print(f"Total unique CNL:ASP pairs generated: {len(all_cnl_asp_pairs):,}")
+print(f"Total unique NL:CNL pairs generated: {len(all_nl_cnl_pairs):,}")
+
+print(f"\nBreakdown by theme (CNL:ASP):")
+for theme, count in cnl_asp_stats:
+    print(f"  {theme:16}: {count:4,} pairs")
+
+print(f"\nBreakdown by theme (NL:CNL):")
+for theme, count in nl_cnl_stats:
+    print(f"  {theme:16}: {count:4,} pairs")
+
+# --- EXPORT ---
+output_cnl_asp = "easy_config_cnl_to_asp_20k.jsonl"
+output_nl_cnl = "easy_config_nl_to_cnl_20k.jsonl"
+
+print(f"\nExporting CNL:ASP to {output_cnl_asp}...")
+pairs_list = list(all_cnl_asp_pairs)
+random.shuffle(pairs_list)
+with open(output_cnl_asp, "w", encoding="utf-8") as f:
+    for cnl, asp in pairs_list:
+        obj = {
+            "instruction": "Translate this controlled natural language description to ASP code",
+            "input": cnl,
+            "output": asp
+        }
+        f.write(json.dumps(obj, ensure_ascii=False) + "\n")
+print(f"Successfully exported {len(all_cnl_asp_pairs):,} CNL:ASP pairs")
+
+print(f"\nExporting NL:CNL to {output_nl_cnl}...")
+pairs_list = list(all_nl_cnl_pairs)
+random.shuffle(pairs_list)
+with open(output_nl_cnl, "w", encoding="utf-8") as f:
+    for nl, cnl in pairs_list:
+        obj = {
+            "instruction": "Convert this natural language statement to controlled natural language",
+            "input": nl,
+            "output": cnl
+        }
+        f.write(json.dumps(obj, ensure_ascii=False) + "\n")
+print(f"Successfully exported {len(all_nl_cnl_pairs):,} NL:CNL pairs")
+
+print("Easy config modelling complete!")

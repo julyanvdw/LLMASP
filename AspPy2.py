@@ -294,7 +294,13 @@ class DataGenerator:
         # Handle remaining lines not covered by a group
         for line in splice_lines:
             if line not in used_lines:
-                nls = [line.nl_map[m] for m in nl_mods if m in line.nl_map] or [line.asp_code]
+                nls = [line.nl_map[m] for m in nl_mods if m in line.nl_map]
+                if not nls:
+                    # Fallback: use any available NL mode for this line
+                    if line.nl_map:
+                        nls = [next(iter(line.nl_map.values()))]
+                    else:
+                        nls = ["MISSING_NL"]
                 nl_lists.append(nls)
 
         # Cartesian product of all NL lists
